@@ -6,7 +6,7 @@
 
 /** Data instance container & constructor reference
  *
- * @typedef {object} TypeContainer
+ * @typedef {Map} TypeContainer
  *
  * @property {function} TypeContainer.constructor - Constructor function/class object for the given type
  * @property {object[]} TypeContainer.instances - Array of all instances of a given type
@@ -36,24 +36,19 @@ class DataStorage {
 
         /** Object that stores container arrays for all data types
          *
-         * @type TypeContainer
+         * @type Map
          * @private
          */
-        this._types = {};
+        this._types = new Map();
         /** Object that stores essential info about deleted instances for all data types
          *
          * @type DeletedContainer
          * @private
          */
         this._deleted = {};
-        for(let cls of types) {
-            this._types[cls.name] = {
-                constructor: cls,
-                instances: []
-            };
-            this._deleted[cls.name] = {
-                records: []
-            };
+        for(let cls in types) {
+            this._types.set(cls, []);
+            this._deleted.set(cls, []);
         }
 
         /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
