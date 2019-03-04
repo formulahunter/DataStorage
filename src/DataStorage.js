@@ -4,10 +4,64 @@
  *
  */
 
-
+/** Data instance container & constructor reference
+ *
+ * @typedef {object} TypeContainer
+ *
+ * @property {function} TypeContainer.constructor - Constructor function/class object for the given type
+ * @property {object[]} TypeContainer.instances - Array of all instances of a given type
+ */
+/** Record of a deleted data instance
+ *
+ * @typedef {object} DeletedRecord
+ *
+ * @property {number} DeletedRecord._created - ID/_created values of the deleted instance
+ * @property {number} DeletedRecord._deleted - Timestamp at which the instance was deleted
+ */
+/** Deleted instance record container
+ *
+ * @typedef {object} DeletedContainer
+ *
+ * @property {DeletedRecord[]} DeletedContainer.records - Array of object containing records of each deleted instance
+ */
 
 class DataStorage {
-    constructor() {
+    /** Constructor
+     *
+     * @param {string} key - The key to be used for storing data in localStorage
+     * @param {function[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
+     */
+    constructor(key, types) {
+        this.key = key;
+
+        /** Object that stores container arrays for all data types
+         *
+         * @type TypeContainer
+         * @private
+         */
+        this._types = {};
+        /** Object that stores essential info about deleted instances for all data types
+         *
+         * @type DeletedContainer
+         * @private
+         */
+        this._deleted = {};
+        for(let cls of types) {
+            this._types[cls.name] = {
+                constructor: cls,
+                instances: []
+            };
+            this._deleted[cls.name] = {
+                records: []
+            };
+        }
+
+        /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
+         *
+         * @type {number}
+         * @private
+         */
+        this._maxID = 0;
     }
 
 
