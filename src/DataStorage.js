@@ -352,9 +352,18 @@ class DataStorage {
      *
      * @returns {*}
      *
-     * @private
+     * @throws JSONParseError
+     *
+     * @static
      */
-    _parse(jstr, reviver) {}
+    static parse(jstr, reviver) {
+            try {
+                return JSON.parse(jstr);
+            }
+            catch(er) {
+                throw new Error(`JSON parse() error:\n${er}`);
+            }
+        }
 
     /** Serialize a JavaScrip Object into a string
      *    Presently just an alias for `JSON.parse()`
@@ -364,18 +373,45 @@ class DataStorage {
      *
      * @returns {string}
      *
-     * @private
+     * @throws JSONSerializeError
+     *
+     * @static
      */
-    _serialize(val, replacer) {}
+    static serialize(val, replacer) {
+        try {
+            return JSON.stringify(val);
+        }
+        catch(er) {
+            throw new Error(`JSON stringify() error:\n${er}`);
+        }
+    }
 
     /** Serializing all data instances in a consistent format
      *
      * @returns {string} JSON string of all data instances stored in `.types` object
      *
+     * @throws DataStringCompileError
+     *
      * @private
      * @readonly
      */
-    get _dataString() {}
+    get _dataString() {
+        //  Define a container object to be serialized
+        let jobj = {};
+
+        //  Define each type container on `jobj` with its class name as a key
+        try {
+            for(let [type, container] of this._types.entries()) {
+                jobj[type.name] = container;
+            }
+        }
+        catch(er) {
+            throw new DataStringCompileError(`Error compiling data string:\n${er}`);
+        }
+
+        //  Return the serialized container object
+        return DataStorage.serialize(jobj);
+    }
 
 
     /** ##SECTION - Maintain last-sync parameter
@@ -415,4 +451,21 @@ class DataStorage {
      * @readonly
      */
     get _newID() {}
+}
+
+
+class JSONSerializeError extends Error {
+    constructor(...args) {
+        super(...args);
+    }
+}
+class JSONParseError extends Error {
+    constructor(...args) {
+        super(...args);
+    }
+}
+class DataStringCompileError extends Error {
+    constructor(...args) {
+        super(...args);
+    }
 }
