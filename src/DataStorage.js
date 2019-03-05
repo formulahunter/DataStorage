@@ -1,32 +1,14 @@
-/** DataStorage
- *  Hunter Gayden
- *  Created 3/3/2019
- *
+/** @file `DataStorage` class and types
+ *  @author Hunter Gayden
+ *  @since 3/3/2019
  */
 
-/** Data instance container & constructor reference
+/** The `DataStorage` class provides an abstract interface to an advanced data storage pattern designed to be both fast and robust
  *
- * @typedef {Map} TypeContainer
- *
- * @property {function} TypeContainer.constructor - Constructor function/class object for the given type
- * @property {object[]} TypeContainer.instances - Array of all instances of a given type
+ * @since 11/25/2018
  */
-/** Record of a deleted data instance
- *
- * @typedef {object} DeletedRecord
- *
- * @property {number} DeletedRecord._created - ID/_created values of the deleted instance
- * @property {number} DeletedRecord._deleted - Timestamp at which the instance was deleted
- */
-/** Deleted instance record container
- *
- * @typedef {object} DeletedContainer
- *
- * @property {DeletedRecord[]} DeletedContainer.records - Array of object containing records of each deleted instance
- */
-
 class DataStorage {
-    /** Constructor
+    /** @constructor
      *
      * @param {string} key - The key to be used for storing data in localStorage
      * @param {function[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
@@ -34,18 +16,20 @@ class DataStorage {
     constructor(key, types) {
         this.key = key;
 
-        /** Object that stores container arrays for all data types
+        /** **JavaScript** `Map` storing containers for all data types
          *
-         * @type Map
+         * @property {Map} _created
+         *
          * @private
          */
         this._types = new Map();
-        /** Object that stores essential info about deleted instances for all data types
+        /** **JavaScript** `Map` storing containers for all data types
          *
-         * @type DeletedContainer
+         * @property {Map} _deleted
+         *
          * @private
          */
-        this._deleted = {};
+        this._deleted = new Map();
         for(let cls in types) {
             this._types.set(cls, []);
             this._deleted.set(cls, []);
@@ -53,7 +37,8 @@ class DataStorage {
 
         /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
          *
-         * @type {number}
+         * @property {number} _maxID
+         *
          * @private
          */
         this._maxID = 0;
@@ -86,31 +71,25 @@ class DataStorage {
      */
 
     /** Save new data instance
+     * @param {ModelClass} inst - The data instance to be saved
      *
-     * @param {string} type
-     * @param {object} inst
-     *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      */
-    save(type, inst) {}
+    save(inst) {}
 
     /** Edit existing data instance
+     * @param {ModelClass} inst
      *
-     * @param {string} type
-     * @param {object} inst
-     *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      */
-    edit(type, inst) {}
+    edit(inst) {}
 
     /** Delete data instance
+     * @param {ModelClass} inst
      *
-     * @param {string} type
-     * @param {object} inst
-     *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      */
-    delete(type, inst) {}
+    delete(inst) {}
 
 
     /** #PRIVATE API
@@ -153,7 +132,6 @@ class DataStorage {
     /** Read items from local storage
      *    Returns `null` if data in local storage is not truthy
      *    Otherwise returns result of decrypt()
-     *
      * @param {string} key
      *
      * @returns {(string|null)}
@@ -163,7 +141,6 @@ class DataStorage {
     _read(key) {}
 
     /** Write items to local storage
-     *
      *
      * @param {string} key
      * @param {object} data
@@ -191,7 +168,7 @@ class DataStorage {
      * @param {string} local
      * @param {string} remote
      *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      *
      * @private
      */
@@ -199,11 +176,9 @@ class DataStorage {
 
     /** Compare two hash values for equality
      *
-     * @param {string[]} hashes - Hash digests to compare
-     * @param {string} remote - Remote hash digest
-     * @param {string} local - Local hash digest
+     * @param {string[]} hashes - Remote and local hash digests to compare
      *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>} - An object summarizing the result of the sync operation
      *
      * @private
      */
@@ -217,7 +192,7 @@ class DataStorage {
      *
      * @param {object} result
      *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      *
      * @private
      */
@@ -235,7 +210,7 @@ class DataStorage {
      *
      * @param {object} response
      *
-     * @returns {Promise}
+     * @returns {Promise<SyncResult>}
      *
      * @private
      */
@@ -259,7 +234,7 @@ class DataStorage {
      * @param {string} [data=`get _dataString()`] - The string to be hashed
      * @param {string} [algo=SHA-256] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
-     * @returns {Promise} Resolves to the string hash digest
+     * @returns {Promise<string>} Resolves to the string hash digest
      *
      * @private
      */
@@ -269,11 +244,14 @@ class DataStorage {
      *
      * @param {ArrayBuffer} buff - The `ArrayBuffer` returned by `crypto.subtle.digest()`
      *
-     * @returns {Promise} Resolves to the string hash digest
+     * @returns {Promise<string>} Resolves to the string hash digest
      *
      * @private
      */
-    _buffString(buff) {}
+    _buffString(buff) {
+        let view = new Uint8Array(buff);
+        return view.reduce((prev, curr) => {return prev.concat(curr.toString(16).padStart(2, '0'))}, '');
+    }
 
 
     /** ##SECTION - Dispatch XHR GET and POST requests
@@ -287,7 +265,7 @@ class DataStorage {
      * @param {string} url - The URL of the request target file
      * @param {string[]} [headers=[]] - An array of request headers to be set on the XHR object before it is sent
      *
-     * @returns {Promise} Resolves to the value of the server response
+     * @returns {Promise<object>} Resolves to the value of the server response
      *
      * @private
      */
@@ -299,7 +277,7 @@ class DataStorage {
      * @param {string} url - The URL of the request target file
      * @param {string[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
-     * @returns {Promise} Resolves to the value of the server response
+     * @returns {Promise<object>} Resolves to the value of the server response
      *
      * @private
      */
@@ -352,7 +330,7 @@ class DataStorage {
      *
      * @returns {*}
      *
-     * @throws JSONParseError
+     * @throws DSErrorParseJSON
      *
      * @static
      */
@@ -373,7 +351,7 @@ class DataStorage {
      *
      * @returns {string}
      *
-     * @throws JSONSerializeError
+     * @throws DSErrorSerializeJSON
      *
      * @static
      */
@@ -390,7 +368,7 @@ class DataStorage {
      *
      * @returns {string} JSON string of all data instances stored in `.types` object
      *
-     * @throws DataStringCompileError
+     * @throws DSErrorCompileDataString
      *
      * @private
      * @readonly
@@ -406,7 +384,7 @@ class DataStorage {
             }
         }
         catch(er) {
-            throw new DataStringCompileError(`Error compiling data string:\n${er}`);
+            throw new DSErrorCompileDataString(`Error compiling data string:\n${er}`);
         }
 
         //  Return the serialized container object
@@ -453,19 +431,111 @@ class DataStorage {
     get _newID() {}
 }
 
+/** Error thrown when `JSON` fails to serialize an object
+ * @extends Error
+ */
+class DSErrorSerializeJSON extends Error {
+    constructor(...args) {
+        super(...args);
+    }
+}
+/** Error thrown when `JSON` fails to parse a string
+ * @extends Error
+ */
+class DSErrorParseJSON extends Error {
+    constructor(...args) {
+        super(...args);
+    }
+}
+/** Error thrown when `DataStorage` fails to compile a data string
+ * @extends Error
+ */
+class DSErrorCompileDataString extends Error {
+    constructor(...args) {
+        super(...args);
+    }
+}
 
-class JSONSerializeError extends Error {
-    constructor(...args) {
-        super(...args);
-    }
-}
-class JSONParseError extends Error {
-    constructor(...args) {
-        super(...args);
-    }
-}
-class DataStringCompileError extends Error {
-    constructor(...args) {
-        super(...args);
-    }
-}
+/** Sync result summary object
+ *
+ * @typedef {object} SyncResult
+ * @property {(string|undefined)} [hash] - If sync is successful, the hash of the synchronized data files
+ * @property {(number|undefined)} [sync] - If sync is successful, the timestamp at which the sync is recorded
+ * @property {(object|undefined)} [resolve] - If a discrepancy was resolved, the resolved data instances
+ */
+
+/** Data class
+ *
+ * @external ModelClass
+ *
+ * @property {number|undefined} _created - The timestamp at which the data instance was saved
+ * @private
+ *
+ * @property {number|undefined} _modified - The timestamp at which the data instance was most recently modified
+ * @private
+ */
+/** Return a new ModelClass instance from a JSON string/raw JSON object
+ * @method external:ModelClass.fromJSON
+ * @returns {ModelClass}
+ */
+/** Public getter method of _created property
+ * @method external:ModelClass#id
+ * @returns {(number|undefined)}
+ */
+/** Return the JSON text representation of the data instance
+ * @method external:ModelClass#toJSON
+ * @returns {string}
+ */
+/** Return a readable string representation of the data instance, e.g. for console output
+ * @method external:ModelClass#toString
+ *@returns {string}
+ */
+/** Deleted data instance
+ *
+ * @typedef DeletedDataInstance
+ *
+ * @property {number} _created - The timestamp at which the data instance was saved
+ * @private
+ *
+ * @property {number} _deleted - The timestamp at which the data instance was deleted
+ * @private
+ */
+
+
+/** Data activity rank
+ * 'new', 'modified', 'deleted', or 'conflict'
+ *
+ * @typedef {string} DataActivityRank
+ *
+ * @enum {string}
+ */
+
+/** Data instance container indexed by type-rank-id
+ *
+ * @typedef {object} IndexObjectTypeRankId
+ *
+ * @property {object} [type] - A container object with data instances of the given type, organized by rank
+ * @property {object} [type.rank] - Containers for each individual data rank
+ * @property {ModelClass} [rank.id] - A data instance of the given type & rank, stored using its ID as a key
+ */
+
+/** Data instance container & constructor reference
+ *
+ * @typedef {Map} TypeContainer
+ *
+ * @property {function} constructor - Constructor function/class object for the given type
+ * @property {object[]} instances - Array of all instances of a given type
+ */
+/** Record of a deleted data instance
+ *
+ * @typedef {object} DeletedRecord
+ *
+ * @property {number} _created - ID/_created values of the deleted instance
+ * @property {number} _deleted - Timestamp at which the instance was deleted
+ */
+/** Deleted instance record container
+ *
+ * @typedef {object} DeletedContainer
+ *
+ * @property {DeletedRecord[]} DeletedContainer.records - Array of object containing records of each deleted instance
+ */
