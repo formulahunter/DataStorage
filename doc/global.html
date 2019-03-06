@@ -40,7 +40,7 @@
 			<li class="dropdown">
 				<a href="global.html" class="dropdown-toggle" data-toggle="dropdown">Global<b class="caret"></b></a>
 				<ul class="dropdown-menu inline">
-					<li><a href="global.html#DataActivityRank">DataActivityRank</a></li>
+					<li><a href="global.html#DataActivityRank">DataActivityRank</a></li><li><a href="global.html#fromHexString">fromHexString</a></li><li><a href="global.html#toHexString">toHexString</a></li>
 				</ul>
 			</li>
 			
@@ -218,7 +218,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-505">line 505</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-643">line 643</a>
 			</li>
 		</ul>
 	</dd>
@@ -238,6 +238,329 @@
         </dl>
     
 
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        <dl>
+            
+<hr>
+<dt>
+    <h4 class="name" id="fromHexString"><span class="type-signature"></span>fromHexString(hexString)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Convert a string of hexadecimal characters to a <code>Uint8Array</code><br>  Adapted from <a href="https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript" title="How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019">StackOverflow answer</a></p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>hexString</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>string of characters 0-9 and a-f</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="DataStorage.js.html">DataStorage.js</a>,
+				 <a href="DataStorage.js.html#sunlight-1-line-546">line 546</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Uint8Array</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        
+            
+<hr>
+<dt>
+    <h4 class="name" id="toHexString"><span class="type-signature"></span>toHexString(bytes)</h4>
+    
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        <p>Convert an array of 8-bit integers to a string of hexadecimal characters<br>  Adapted from <a href="https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript" title="How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019">StackOverflow answer</a></p>
+    </div>
+    
+
+    
+
+    
+
+    
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>bytes</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">BufferSource</span>
+|
+
+<span class="param-type">Array.&lt;number></span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+    
+
+    
+<dl class="details">
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="DataStorage.js.html">DataStorage.js</a>,
+				 <a href="DataStorage.js.html#sunlight-1-line-560">line 560</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+
+    </dd>
+</dl>
+
+
+        
+
+    
+</dd>
+
+        </dl>
     
 
     
@@ -443,7 +766,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-459">line 459</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-597">line 597</a>
 			</li>
 		</ul>
 	</dd>
@@ -590,7 +913,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-493">line 493</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-631">line 631</a>
 			</li>
 		</ul>
 	</dd>
@@ -825,7 +1148,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-513">line 513</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-651">line 651</a>
 			</li>
 		</ul>
 	</dd>
@@ -983,7 +1306,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-522">line 522</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-660">line 660</a>
 			</li>
 		</ul>
 	</dd>
@@ -1141,7 +1464,7 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-529">line 529</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-667">line 667</a>
 			</li>
 		</ul>
 	</dd>
@@ -1275,7 +1598,189 @@
 		<ul class="dummy">
 			<li>
 				<a href="DataStorage.js.html">DataStorage.js</a>,
-				 <a href="DataStorage.js.html#sunlight-1-line-536">line 536</a>
+				 <a href="DataStorage.js.html#sunlight-1-line-674">line 674</a>
+			</li>
+		</ul>
+	</dd>
+	
+
+	
+
+	
+
+	
+</dl>
+
+
+    
+</dd>
+
+            
+                
+<hr>
+<dt class="name" id="AesGcmCipher">
+    <h4 id="AesGcmCipher">AesGcmCipher</h4>
+
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>AES-GCM cipher object</p>
+    </div>
+    
+
+    
+        <h5>Type:</h5>
+        <ul>
+            <li>
+                
+<span class="param-type">object</span>
+
+
+
+            </li>
+        </ul>
+    
+
+    
+<dl class="details">
+    
+
+    <h5 class="subsection-title">Properties:</h5>
+
+    <dl>
+
+<table class="props table table-striped">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>salt</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>iv</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>text</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+</dl>
+
+    
+
+	
+
+	
+
+	
+
+    
+
+    
+
+    
+
+    
+
+	
+
+	
+
+	
+
+	
+
+	
+
+
+
+	
+	<dt class="tag-source method-doc-label method-doc-details-label">Source:</dt>
+	<dd class="tag-source">
+		<ul class="dummy">
+			<li>
+				<a href="DataStorage.js.html">DataStorage.js</a>,
+				 <a href="DataStorage.js.html#sunlight-1-line-291">line 291</a>
 			</li>
 		</ul>
 	</dd>
@@ -1344,7 +1849,7 @@
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a>
 	
-		on Tue Mar 5th 2019
+		on Wed Mar 6th 2019
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
