@@ -301,6 +301,15 @@ class DataStorage {
      *  _decrypt()
      */
 
+    /** AES-GCM cipher object
+     *
+     * @typedef AesGcmCipher
+     *
+     * @property {string} salt
+     * @property {string} iv
+     * @property {string} cipher
+     */
+
     /** Encrypt a string with a given password
      *    `deriveKey()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.deriveKey()` reference][deriveKey() ref]
      *    `encrypt()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.encrypt()` reference][encrypt() ref]
@@ -313,12 +322,13 @@ class DataStorage {
      * @param {string} plaintext - Data string to be encrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
-     * @returns {PromiseLike<string>} The encrypted text
+     * @returns {PromiseLike<AesGcmCipher>} The encrypted cipher object
      *
      * @private
      */
     _encrypt(plaintext, password = 'password') {
         let enc = new TextEncoder();
+        let salt, iv;
         return window.crypto.subtle.importKey(
             'raw',
             enc.encode(password),
@@ -327,7 +337,7 @@ class DataStorage {
             ['deriveBits', 'deriveKey']
         )
         .then(function(material) {
-            let salt = window.crypto.getRandomValues(new Uint8Array(16));
+            salt = window.crypto.getRandomValues(new Uint8Array(16));
             return window.crypto.subtle.deriveKey(
             {
                 "name": "PBKDF2",
@@ -343,7 +353,7 @@ class DataStorage {
         })
         .then(function(key) {
             let enc = new TextEncoder();
-            let iv = window.crypto.getRandomValues(new Uint8Array(12));
+            iv = window.crypto.getRandomValues(new Uint8Array(12));
             return window.crypto.subtle.encrypt(
                 {
                     name: "AES-GCM",
@@ -353,7 +363,20 @@ class DataStorage {
                 enc.encode(plaintext)
             );
         })
-        .then(this._buffString);
+        .then((function (cipher) {
+            salt = this._buffString(salt);
+            iv = this._buffString(iv);
+            cipher = this._buffString(cipher);
+
+            return Promise.all([salt, iv, cipher]);
+        }).bind(this))
+        .then(function([salt, iv, cipher]) {
+            return {
+                salt: salt,
+                iv: iv,
+                cipher: cipher
+            };
+        });
     }
 
     /** Decrypt a cipher with a given password
@@ -362,7 +385,7 @@ class DataStorage {
      * @param {string} cipher - Encrypted cipher to be decrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
-     * @returns {string} The decrypted text
+     * @returns {PromiseLike<string>} The decrypted text
      *
      * @private
      */
