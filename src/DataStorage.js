@@ -30,7 +30,7 @@ class DataStorage {
          * @private
          */
         this._deleted = new Map();
-        for(let cls in types) {
+        for(let cls of types) {
             this._types.set(cls, []);
             this._deleted.set(cls, []);
         }
