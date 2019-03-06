@@ -244,7 +244,7 @@ class DataStorage {
         //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
         let buf = new TextEncoder('utf-8').encode(str);
 
-        return crypto.subtle.digest(algo, buf)
+        return window.crypto.subtle.digest(algo, buf)
             .then(this._buffString)
             .catch(function(reason) {
                 return Promise.reject(new Error(`Error computing hash digest:\n${reason}`));
@@ -302,16 +302,59 @@ class DataStorage {
      */
 
     /** Encrypt a string with a given password
-     *    Presently just an alias for `sjcl.encrypt()`
+     *    `deriveKey()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.deriveKey()` reference][deriveKey() ref]
+     *    `encrypt()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.encrypt()` reference][encrypt() ref]
      *
-     * @param {string} data - Data string to be encrypted
+     * [deriveKey() ref]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey
+     *     "SubtleCrypto.deriveKey() - MDN - March 5, 2019"
+     * [encrypt() ref]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt
+     *     "SubtleCrypto.encrypt() - MDN - March 5, 2019"
+     *
+     * @param {string} plaintext - Data string to be encrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
-     * @returns {string} The encrypted text
+     * @returns {PromiseLike<string>} The encrypted text
      *
      * @private
      */
-    _encrypt(data, password = 'password') {}
+    _encrypt(plaintext, password = 'password') {
+        let enc = new TextEncoder();
+        return window.crypto.subtle.importKey(
+            'raw',
+            enc.encode(password),
+            {name: 'PBKDF2'},
+            false,
+            ['deriveBits', 'deriveKey']
+        )
+        .then(function(material) {
+            let salt = window.crypto.getRandomValues(new Uint8Array(16));
+            return window.crypto.subtle.deriveKey(
+            {
+                "name": "PBKDF2",
+                salt: salt,
+                "iterations": 100000,
+                "hash": "SHA-256"
+            },
+            material,
+            { "name": "AES-GCM", "length": 256},
+            true,
+            [ "encrypt", "decrypt" ]
+        )
+        })
+        .then(function(key) {
+            let enc = new TextEncoder();
+            let iv = window.crypto.getRandomValues(new Uint8Array(12));
+            return window.crypto.subtle.encrypt(
+                {
+                    name: "AES-GCM",
+                    iv: iv
+                },
+                key,
+                enc.encode(plaintext)
+            );
+        })
+        .then(this._buffString);
+    }
 
     /** Decrypt a cipher with a given password
      *    Presently just an alias for `sjcl.decrypt()`

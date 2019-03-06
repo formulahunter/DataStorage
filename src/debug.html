@@ -26,8 +26,11 @@
         }
 
         function main() {
-
             window.data = new DataStorage('mealplan', [Ingredient, Recipe, Meal]);
+
+            console.log('encrypting \'some data\' with password \'password\'');
+            data._encrypt('some data', 'password')
+                .then(console.log.bind(console, 'encrypted ciphertext:'));
         }
     </script>
 </head>
