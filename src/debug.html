@@ -48,6 +48,25 @@
                 console.log('decrypted plaintext:', plaintext);
             });
         }
+
+        /** Demonstration of JavaScript `async` and `await` declarations
+         *     The `async` keyword causes a function to return an implicit `Promise`
+         *     The `await` keyword causes execution to pause until a Promise returned by the `await`ed function resolves
+         *
+         * @param str
+         * @param algo
+         * @returns {Promise<string>}
+         */
+        async function hash(str = 'some data', algo = 'SHA-256') {
+            // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
+
+            //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
+            let buf = new TextEncoder('utf-8').encode(str);
+
+            let buff = await window.crypto.subtle.digest(algo, buf);
+            let view = new Uint8Array(buff);
+            return view.reduce((prev, curr) => {return prev.concat(curr.toString(16).padStart(2, '0'))}, '');
+        }
     </script>
 </head>
 <body>
