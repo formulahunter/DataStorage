@@ -231,14 +231,25 @@ class DataStorage {
      *    Adopted from MDN SubtleCrypto.digest() reference:
      *    https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
      *
-     * @param {string} [data=`get _dataString()`] - The string to be hashed
+     * @param {string} [str=`_dataString`] - The string to be hashed
      * @param {string} [algo=SHA-256] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise<string>} Resolves to the string hash digest
      *
      * @private
      */
-    _hash(data, algo = 'SHA-256') {}
+    _hash(str = this._dataString, algo = 'SHA-256') {
+        // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
+
+        //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
+        let buf = new TextEncoder('utf-8').encode(str);
+
+        return crypto.subtle.digest(algo, buf)
+            .then(this._buffString)
+            .catch(function(reason) {
+                return Promise.reject(new Error(`Error computing hash digest:\n${reason}`));
+            });
+    }
 
     /** Compile a string from values in the `ArrayBuffer` returned by `crypto.subtle.digest()`
      *
