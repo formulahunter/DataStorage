@@ -245,23 +245,10 @@ class DataStorage {
         let buf = new TextEncoder('utf-8').encode(str);
 
         return window.crypto.subtle.digest(algo, buf)
-            .then(this._buffString)
+            .then(toHexString)
             .catch(function(reason) {
                 return Promise.reject(new Error(`Error computing hash digest:\n${reason}`));
             });
-    }
-
-    /** Compile a string from values in the `ArrayBuffer` returned by `crypto.subtle.digest()`
-     *
-     * @param {ArrayBuffer} buff - The `ArrayBuffer` returned by `crypto.subtle.digest()`
-     *
-     * @returns {Promise<string>} Resolves to the string hash digest
-     *
-     * @private
-     */
-    _buffString(buff) {
-        let view = new Uint8Array(buff);
-        return view.reduce((prev, curr) => {return prev.concat(curr.toString(16).padStart(2, '0'))}, '');
     }
 
 
@@ -303,21 +290,24 @@ class DataStorage {
 
     /** AES-GCM cipher object
      *
-     * @typedef AesGcmCipher
+     * @typedef {object} AesGcmCipher
      *
      * @property {string} salt
      * @property {string} iv
-     * @property {string} cipher
+     * @property {string} text
      */
 
     /** Encrypt a string with a given password
      *    `deriveKey()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.deriveKey()` reference][deriveKey() ref]
      *    `encrypt()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.encrypt()` reference][encrypt() ref]
+     *    MDN's references didn't explain what the "salt" parameter is; that was found on [the linked **GitHub** example][github example]
      *
      * [deriveKey() ref]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey
      *     "SubtleCrypto.deriveKey() - MDN - March 5, 2019"
      * [encrypt() ref]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/encrypt
      *     "SubtleCrypto.encrypt() - MDN - March 5, 2019"
+     * [github example]: https://github.com/mdn/dom-examples/blob/master/web-crypto/derive-key/pbkdf2.js
+     *     "MDN/DOM examples/pbkdf2.js - GitHub - March 5, 2019"
      *
      * @param {string} plaintext - Data string to be encrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
@@ -330,26 +320,26 @@ class DataStorage {
         let enc = new TextEncoder();
         let salt, iv;
         return window.crypto.subtle.importKey(
-            'raw',
-            enc.encode(password),
-            {name: 'PBKDF2'},
-            false,
-            ['deriveBits', 'deriveKey']
-        )
+                'raw',
+                enc.encode(password),
+                {name: 'PBKDF2'},
+                false,
+                ['deriveBits', 'deriveKey']
+            )
         .then(function(material) {
             salt = window.crypto.getRandomValues(new Uint8Array(16));
             return window.crypto.subtle.deriveKey(
-            {
-                "name": "PBKDF2",
-                salt: salt,
-                "iterations": 100000,
-                "hash": "SHA-256"
-            },
-            material,
-            { "name": "AES-GCM", "length": 256},
-            true,
-            [ "encrypt", "decrypt" ]
-        )
+                {
+                    "name": "PBKDF2",
+                    salt: salt,
+                    "iterations": 100000,
+                    "hash": "SHA-256"
+                },
+                material,
+                { "name": "AES-GCM", "length": 256},
+                true,
+                [ "encrypt", "decrypt" ]
+            );
         })
         .then(function(key) {
             let enc = new TextEncoder();
@@ -363,18 +353,12 @@ class DataStorage {
                 enc.encode(plaintext)
             );
         })
-        .then((function (cipher) {
-            salt = this._buffString(salt);
-            iv = this._buffString(iv);
-            cipher = this._buffString(cipher);
-
-            return Promise.all([salt, iv, cipher]);
-        }).bind(this))
-        .then(function([salt, iv, cipher]) {
+        .then(function(cipher) {
+            console.log(cipher);
             return {
-                salt: salt,
-                iv: iv,
-                cipher: cipher
+                salt: toHexString(salt),
+                iv: toHexString(iv),
+                text: toHexString(cipher)
             };
         });
     }
@@ -382,14 +366,55 @@ class DataStorage {
     /** Decrypt a cipher with a given password
      *    Presently just an alias for `sjcl.decrypt()`
      *
-     * @param {string} cipher - Encrypted cipher to be decrypted
+     * @param {string} cipher - Cipher object to be decrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
      * @returns {PromiseLike<string>} The decrypted text
      *
      * @private
      */
-    _decrypt(cipher, password = 'password') {}
+    _decrypt(cipher, password = 'password') {
+        let salt = fromHexString(cipher.salt);
+        let iv = fromHexString(cipher.iv);
+        let ciphertext = fromHexString(cipher.text);
+
+        let enc = new TextEncoder();
+        return window.crypto.subtle.importKey(
+                'raw',
+                enc.encode(password),
+                {name: 'PBKDF2'},
+                false,
+                ['deriveBits', 'deriveKey']
+            )
+            .then(function(material) {
+                return window.crypto.subtle.deriveKey(
+                        {
+                            "name": "PBKDF2",
+                            salt: salt,
+                            "iterations": 100000,
+                            "hash": "SHA-256"
+                        },
+                        material,
+                        { "name": "AES-GCM", "length": 256},
+                        true,
+                        [ "encrypt", "decrypt" ]
+                    );
+            })
+            .then(function(key) {
+                return window.crypto.subtle.decrypt(
+                        {
+                            name: "AES-GCM",
+                            iv: iv
+                        },
+                        key,
+                        ciphertext
+                    );
+            })
+            .then(function(buff) {
+                let enc = new TextDecoder();
+                return enc.decode(buff);
+            });
+    }
 
 
     /** ##SECTION - JSON conversions
@@ -506,6 +531,42 @@ class DataStorage {
      * @readonly
      */
     get _newID() {}
+}
+
+/** Convert a string of hexadecimal characters to a `Uint8Array`
+ *   Adapted from [StackOverflow answer][hex string conversion]
+ *
+ * [hex string conversion]: https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript
+ *     "How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019"
+ *
+ * @param {string} hexString - string of characters 0-9 and a-f
+ *
+ * @returns {Uint8Array}
+ */
+function fromHexString(hexString) {
+    return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+}
+
+/** Convert an array of 8-bit integers to a string of hexadecimal characters
+ *   Adapted from [StackOverflow answer][hex string conversion]
+ *
+ * [hex string conversion]: https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript
+ *     "How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019"
+ *
+ * @param {(BufferSource|number[])} bytes
+ *
+ * @returns {string}
+ */
+function toHexString(bytes) {
+    if(bytes instanceof ArrayBuffer)
+        bytes = new Uint8Array(bytes);
+
+    try {
+        return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
+    }
+    catch(er) {
+        console.log(er, bytes);
+    }
 }
 
 /** Error thrown when `JSON` fails to serialize an object
