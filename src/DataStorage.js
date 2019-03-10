@@ -158,81 +158,6 @@ class DataStorage {
     delete(inst) {}
 
 
-    /** ##SECTION - Local storage interface
-     *   static async read()
-     *   static async write()
-     */
-
-    /** Read items from local storage
-     *    Returns `null` if data in local storage is not truthy
-     *    Otherwise returns result of decrypt()
-     *
-     * @param {string} key
-     *
-     * @returns {PromiseLike<(string|null)>}
-     *
-     * TODO Implement server data loading when no local data found
-     */
-    static async read(key) {
-        try {
-            //  All local data is encrypted
-            let cipher = localStorage.getItem(key);
-
-            if(cipher === null) {
-                console.log(`No local data found under ${key}`);
-
-                let loadRemote = confirm(`No data stored locally under data key ${key}\n\nLoad data file from server?`);
-                if(!loadRemote) {
-                    console.log(`User has elected not to load data from remote file for key ${key}`);
-
-                    //  Return a JSON string representing an empty object
-                    return '{}';
-                }
-
-                //  Load remote data file, save locally under `key`, and return data string
-                alert('Loading remote data is not yet implemented\nAborting');
-
-                //  Else reject with reason to indicate why sync failed
-                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key \`${key}\``);
-            }
-
-            return DataStorage.decrypt(cipher);
-        }
-        catch(er) {
-            if(!(er instanceof DSError))
-                er = new DSErrorReadLocalData(`Error retrieving data from local storage key \`${key}\``, er);
-
-            throw er;
-        }
-    }
-
-    /** Write items to local storage
-     *    Returns hash digest of **the data string written to disk (not the data in memory)**
-     *
-     * @param {string} key
-     * @param {string|object} data
-     *
-     * @returns {PromiseLike<string>}
-     */
-    static async write(key, data) {
-        try {
-            if(!(data instanceof String || typeof data === 'string'))
-                data = DataStorage.serialize(data);
-
-            let str = await DataStorage.encrypt(data);
-            localStorage.setItem(key, str);
-
-            return DataStorage.hash(str);
-        }
-        catch(er) {
-            if(!(er instanceof DSError))
-                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key \`${key}\``, er);
-
-            throw er;
-        }
-    }
-
-
     /** ##SECTION - Sync local storage with remote data file
      *
      *   _sync()
@@ -342,6 +267,81 @@ class DataStorage {
      */
     async _hash(str = this._dataString, algo) {
         return DataStorage.hash(str, algo);
+    }
+
+
+    /** ##SECTION - Local storage interface
+     *   static async read()
+     *   static async write()
+     */
+
+    /** Read items from local storage
+     *    Returns `null` if data in local storage is not truthy
+     *    Otherwise returns result of decrypt()
+     *
+     * @param {string} key
+     *
+     * @returns {PromiseLike<(string|null)>}
+     *
+     * TODO Implement server data loading when no local data found
+     */
+    static async read(key) {
+        try {
+            //  All local data is encrypted
+            let cipher = localStorage.getItem(key);
+
+            if(cipher === null) {
+                console.log(`No local data found under ${key}`);
+
+                let loadRemote = confirm(`No data stored locally under data key ${key}\n\nLoad data file from server?`);
+                if(!loadRemote) {
+                    console.log(`User has elected not to load data from remote file for key ${key}`);
+
+                    //  Return a JSON string representing an empty object
+                    return '{}';
+                }
+
+                //  Load remote data file, save locally under `key`, and return data string
+                alert('Loading remote data is not yet implemented\nAborting');
+
+                //  Else reject with reason to indicate why sync failed
+                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key \`${key}\``);
+            }
+
+            return DataStorage.decrypt(cipher);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorReadLocalData(`Error retrieving data from local storage key \`${key}\``, er);
+
+            throw er;
+        }
+    }
+
+    /** Write items to local storage
+     *    Returns hash digest of **the data string written to disk (not the data in memory)**
+     *
+     * @param {string} key
+     * @param {string|object} data
+     *
+     * @returns {PromiseLike<string>}
+     */
+    static async write(key, data) {
+        try {
+            if(!(data instanceof String || typeof data === 'string'))
+                data = DataStorage.serialize(data);
+
+            let str = await DataStorage.encrypt(data);
+            localStorage.setItem(key, str);
+
+            return DataStorage.hash(str);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key \`${key}\``, er);
+
+            throw er;
+        }
     }
 
 
