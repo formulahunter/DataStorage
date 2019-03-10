@@ -666,21 +666,45 @@ class DataStorage {
      */
 
     /** Get timestamp of the most recent successful sync
+     *    Returns 0 if `{this.key}-sync` does not exist in local storage
      *
-     * @returns {number} The timestamp of the most recent successful sync
+     * @returns {number} The timestamp of the most recent successful sync, or 0 if parameter not found in local storage
      *
      * @private
      */
-    get _lastSync() {}
+    get _lastSync() {
+        try {
+            let sync = localStorage.getItem(`${this.key}-sync`);
+            if(sync === null)
+                return 0;
+
+            return Number(sync);
+        }
+        catch(er) {
+            throw new DSErrorGetLastSync(`Error reading \`${this.key}-sync\` from local storage`, er);
+        }
+    }
     /** Set timestamp of the most recent successful sync
      *
      * @param {number} sync
      *
-     * @returns {undefined}
-     *
      * @private
      */
-    set _lastSync(sync) {}
+    set _lastSync(sync) {
+        try {
+            if(sync === true || sync === false || sync === undefined || sync === null)
+                throw new TypeError('.lastSync cannot be `true`, `false`, `undefined`, or `null`');
+            if(Array.isArray(sync))
+                throw new TypeError('.lastSync cannot be an array');
+            if(Number.isNaN(Number(sync)) || !Number.isInteger(Number(sync)))
+                throw new TypeError('.lastSync must be an integer, or a string that can be parsed to an integer');
+
+            localStorage.setItem(`${this.key}-sync`, sync.toString());
+        }
+        catch(er) {
+            throw new DSErrorSetLastSync(`Error writing last-sync parameter ${sync} to local storage key \`${this.key}-sync\``, er);
+        }
+    }
 
 
     /** ##SECTION - ID assignment
@@ -911,6 +935,31 @@ class DSErrorParseJSON extends DSError {
  *
  */
 class DSErrorCompileDataString extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when local last-sync parameter read fails
+ *
+ */
+class DSErrorGetLastSync extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when local last-sync parameter write fails
+ *
+ */
+class DSErrorSetLastSync extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
      * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated

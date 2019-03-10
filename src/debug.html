@@ -73,11 +73,20 @@
             console.log('data fetched from server:', dataFile);
 
             //  POST data to server via XMLHttpRequest
-            let time = (new Date()).toUTCString();
-            let response = await DataStorage.xhrPost({[time]: 'OMG more data'}, 'add.php');
+            let time = new Date();
+            let response = await DataStorage.xhrPost({[time.toUTCString()]: 'OMG more data'}, 'add.php');
 
             //  Output the server response to POST request
             console.log('server response:', response);
+
+            //  Write the `_lastSync` property to local storage
+            data._lastSync = time.getTime();
+
+            //  Get the `_lastSync` property from local storage
+            let lastSync = data._lastSync;
+
+            //  Output the last-sync value as read from local storage
+            console.log('last-sync value from local storage:', lastSync);
         }
 
         /** Demonstration of JavaScript `async` and `await` declarations
