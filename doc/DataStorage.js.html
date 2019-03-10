@@ -282,15 +282,7 @@ class DataStorage {
      *
      * @private
      */
-    _reconcile(result) {
-        /** Example of documenting return object properties
-         * @param {object} response - An object containing data returned by the server's reconciliation script
-         * @param {string} response.hash - Hash digest of the server's data file computed after running its reconciliation algorithm
-         * @param {string} [response.&lt;type>] - A container object with data instances of the given type, organized by rank
-         * @param {string} [response.&lt;type>.&lt;new|modified|deleted|conflicts>] - Containers for each individual data rank
-         * @param {string} [response.&lt;type>.&lt;new|modified|deleted|conflicts>.&lt;id>] - A data instance of the given type &amp; rank, stored using its ID as a key
-         */
-    }
+    _reconcile(result) {}
 
     /** Resolve server's reconciliation response
      *
@@ -324,17 +316,19 @@ class DataStorage {
      *
      * @private
      */
-    _hash(str = this._dataString, algo = 'SHA-256') {
+    async _hash(str = this._dataString, algo = 'SHA-256') {
         // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
 
         //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
         let buf = new TextEncoder('utf-8').encode(str);
 
-        return window.crypto.subtle.digest(algo, buf)
-            .then(toHexString)
-            .catch(function(reason) {
-                return Promise.reject(new Error(`Error computing hash digest:\n${reason}`));
-            });
+        try {
+            let digest = await window.crypto.subtle.digest(algo, buf);
+            return toHexString(digest);
+        }
+        catch(er) {
+            throw new Error(`Error computing hash digest:\n${er}`);
+        }
     }
 
 
@@ -399,107 +393,102 @@ class DataStorage {
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
      * @returns {PromiseLike&lt;AesGcmCipher>} The encrypted cipher object
-     *
-     * @private
      */
-    _encrypt(plaintext, password = 'password') {
+    static async encrypt(plaintext, password = 'password') {
         let enc = new TextEncoder();
-        let salt, iv;
-        return window.crypto.subtle.importKey(
-                'raw',
-                enc.encode(password),
-                {name: 'PBKDF2'},
-                false,
-                ['deriveBits', 'deriveKey']
-            )
-        .then(function(material) {
-            salt = window.crypto.getRandomValues(new Uint8Array(16));
-            return window.crypto.subtle.deriveKey(
-                {
-                    "name": "PBKDF2",
-                    salt: salt,
-                    "iterations": 100000,
-                    "hash": "SHA-256"
-                },
-                material,
-                { "name": "AES-GCM", "length": 256},
-                true,
-                [ "encrypt", "decrypt" ]
-            );
-        })
-        .then(function(key) {
-            let enc = new TextEncoder();
-            iv = window.crypto.getRandomValues(new Uint8Array(12));
-            return window.crypto.subtle.encrypt(
-                {
-                    name: "AES-GCM",
-                    iv: iv
-                },
-                key,
-                enc.encode(plaintext)
-            );
-        })
-        .then(function(cipher) {
-            console.log(cipher);
-            return {
-                salt: toHexString(salt),
-                iv: toHexString(iv),
-                text: toHexString(cipher)
-            };
+
+        let keyMaterial = await window.crypto.subtle.importKey(
+            'raw',
+            enc.encode(password),
+            {name: 'PBKDF2'},
+            false,
+            ['deriveBits', 'deriveKey']
+        );
+
+        let salt = window.crypto.getRandomValues(new Uint8Array(16));
+        let key = await window.crypto.subtle.deriveKey(
+            {
+                'name': 'PBKDF2',
+                salt: salt,
+                'iterations': 100000,
+                'hash': 'SHA-256'
+            },
+            keyMaterial,
+            { 'name': 'AES-GCM', 'length': 256},
+            true,
+            [ 'encrypt', 'decrypt' ]
+        );
+
+        let iv = window.crypto.getRandomValues(new Uint8Array(12));
+        let cipher = await window.crypto.subtle.encrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv
+            },
+            key,
+            enc.encode(plaintext)
+        );
+
+        //  Print `cipher` to console/output for debugging
+        console.debug(cipher);
+
+        //  Return cipher text and parameters
+        return DataStorage.serialize({
+            salt: toHexString(salt),
+            iv: toHexString(iv),
+            text: toHexString(cipher)
         });
     }
 
     /** Decrypt a cipher with a given password
      *    Presently just an alias for `sjcl.decrypt()`
      *
-     * @param {string} cipher - Cipher object to be decrypted
+     * @param {(AesGcmCipher|string&lt;AesGcmCipher>)} cipher - Cipher object to be decrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
      * @returns {PromiseLike&lt;string>} The decrypted text
-     *
-     * @private
      */
-    _decrypt(cipher, password = 'password') {
-        let salt = fromHexString(cipher.salt);
-        let iv = fromHexString(cipher.iv);
-        let ciphertext = fromHexString(cipher.text);
+    static async decrypt(cipher, password = 'password') {
+        //  Parsed `cipher` into an `object` if it is not already
+        if(typeof cipher === 'string')
+            cipher = DataStorage.parse(cipher);
+
+        if(!cipher.salt &amp;&amp; cipher.iv &amp;&amp; cipher.text)
+            throw new TypeError(`Cannot decrypt ${cipher}: missing 'salt', 'iv', and/or 'text' property`);
 
         let enc = new TextEncoder();
-        return window.crypto.subtle.importKey(
-                'raw',
-                enc.encode(password),
-                {name: 'PBKDF2'},
-                false,
-                ['deriveBits', 'deriveKey']
-            )
-            .then(function(material) {
-                return window.crypto.subtle.deriveKey(
-                        {
-                            "name": "PBKDF2",
-                            salt: salt,
-                            "iterations": 100000,
-                            "hash": "SHA-256"
-                        },
-                        material,
-                        { "name": "AES-GCM", "length": 256},
-                        true,
-                        [ "encrypt", "decrypt" ]
-                    );
-            })
-            .then(function(key) {
-                return window.crypto.subtle.decrypt(
-                        {
-                            name: "AES-GCM",
-                            iv: iv
-                        },
-                        key,
-                        ciphertext
-                    );
-            })
-            .then(function(buff) {
-                let enc = new TextDecoder();
-                return enc.decode(buff);
-            });
+        let keyMaterial = await window.crypto.subtle.importKey(
+            'raw',
+            enc.encode(password),
+            {name: 'PBKDF2'},
+            false,
+            ['deriveBits', 'deriveKey']
+        );
+
+        let key = await window.crypto.subtle.deriveKey(
+            {
+                'name': 'PBKDF2',
+                salt: fromHexString(cipher.salt),
+                'iterations': 100000,
+                'hash': 'SHA-256'
+            },
+            keyMaterial,
+            { 'name': 'AES-GCM', 'length': 256},
+            true,
+            [ 'encrypt', 'decrypt' ]
+        );
+
+        let buff = await window.crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: fromHexString(cipher.iv)
+            },
+            key,
+            fromHexString(cipher.text)
+        );
+
+        let dec = new TextDecoder();
+        return dec.decode(buff);
     }
 
 
@@ -519,8 +508,6 @@ class DataStorage {
      * @returns {*}
      *
      * @throws DSErrorParseJSON
-     *
-     * @static
      */
     static parse(jstr, reviver) {
             try {
@@ -540,8 +527,6 @@ class DataStorage {
      * @returns {string}
      *
      * @throws DSErrorSerializeJSON
-     *
-     * @static
      */
     static serialize(val, replacer) {
         try {
@@ -680,12 +665,20 @@ class DSErrorCompileDataString extends Error {
     }
 }
 
-/** Sync result summary object
+/** Sync result summary type
  *
  * @typedef {object} SyncResult
  * @property {(string|undefined)} [hash] - If sync is successful, the hash of the synchronized data files
  * @property {(number|undefined)} [sync] - If sync is successful, the timestamp at which the sync is recorded
- * @property {(object|undefined)} [resolve] - If a discrepancy was resolved, the resolved data instances
+ * @property {(ReconcileResult|undefined)} [resolve] - If a discrepancy was resolved, the resolved data instances
+ */
+/** Reconcile result summary type
+ *
+ * @typedef {object} ReconcileResult - An object containing data returned by the server's reconciliation script
+ * @property {string} ReconcileResult.hash - Hash digest of the server's data file computed after running its reconciliation algorithm
+ * @property {ReconcileResult.&lt;string, object>} typeContainer - A container object with data instances of the given type, organized by rank
+ * @property {typeContainer.&lt;string, object>} rankContainer - A container object with data instances of the given type and rank, indexed by ID
+ * @property {rankContainer.&lt;string, ModelClass>} dataInstance - A data instance of the given type &amp; rank, stored using its ID as a key
  */
 
 /** Data class
@@ -807,7 +800,7 @@ class DSErrorCompileDataString extends Error {
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a>
 	
-		on Wed Mar 6th 2019
+		on Sat Mar 9th 2019
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>

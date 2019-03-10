@@ -25,28 +25,33 @@
             }
         }
 
-        function main() {
+        async function main() {
             //  Define an instance of `DataStorage`
             window.data = new DataStorage('mealplan', [Ingredient, Recipe, Meal]);
 
-            //  Encrypt a data string with a given password
-            console.log('encrypting \'some data\' with password \'password\'');
-            let enc = data._encrypt('some data', 'password');
+            //  Define a local data cache for demonstration
+            let local = 'someData';
 
-            enc.then(function(cipher) {
-                //  Output the result of the encryption
-                console.log('encrypted cipher:\n%o', cipher);
-                return cipher;
-            })
-            .then(function(cipher) {
-                //  Decrypt the result back to the original string
-                console.log('decrypting cipher');
-                return data._decrypt(cipher, 'password');
-            })
-            .then(function(plaintext) {
-                //  Output the result of the decryption
-                console.log('decrypted plaintext:', plaintext);
-            });
+            //  Compute hash digest of local data
+            console.log('computing hash digest of local data');
+            let hash = await data._hash(local);
+
+            //  Output the result of the hash digest
+            console.log('hash digest:', hash);
+
+            //  Encrypt the local data string with a given password
+            console.log('encrypting local data with password \'password\'');
+            let cipher = await DataStorage.encrypt(local, 'password');
+
+            //  Output the result of the encryption
+            console.log('encrypted cipher:', cipher);
+
+            //  Decrypt the result back to the original string
+            console.log('decrypting cipher');
+            let plaintext = await DataStorage.decrypt(cipher, 'password');
+
+            //  Output the result of the decryption
+            console.log('decrypted plaintext:', plaintext);
         }
 
         /** Demonstration of JavaScript `async` and `await` declarations
