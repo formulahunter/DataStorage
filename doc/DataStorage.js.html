@@ -33,7 +33,7 @@
 			<li class="dropdown">
 				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
 				<ul class="dropdown-menu inline">
-					<li><a href="DataStorage.html">DataStorage</a></li><li><a href="DSErrorSerializeJSON.html">DSErrorSerializeJSON</a></li><li><a href="DSErrorParseJSON.html">DSErrorParseJSON</a></li><li><a href="DSErrorCompileDataString.html">DSErrorCompileDataString</a></li>
+					<li><a href="DataStorage.html">DataStorage</a></li><li><a href="DSError.html">DSError</a></li><li><a href="DSErrorComputHashDigest.html">DSErrorComputHashDigest</a></li><li><a href="DSErrorConvertFromHexString.html">DSErrorConvertFromHexString</a></li><li><a href="DSErrorConvertToHexString.html">DSErrorConvertToHexString</a></li><li><a href="DSErrorReadLocalData.html">DSErrorReadLocalData</a></li><li><a href="DSErrorWriteLocalStorage.html">DSErrorWriteLocalStorage</a></li><li><a href="DSErrorRemoteDataLoad.html">DSErrorRemoteDataLoad</a></li><li><a href="DSErrorSerializeJSON.html">DSErrorSerializeJSON</a></li><li><a href="DSErrorParseJSON.html">DSErrorParseJSON</a></li><li><a href="DSErrorCompileDataString.html">DSErrorCompileDataString</a></li>
 				</ul>
 			</li>
 			
@@ -100,6 +100,18 @@ class DataStorage {
      * @param {function[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
      */
     constructor(key, types) {
+        if(!(key instanceof String || typeof key === 'string'))
+            throw new TypeError(`DataStorage constructor expects a string 'key' argument but received ${key}`);
+
+        if(!Array.isArray(types))
+            throw new TypeError(`DataStorage constructor expects an array 'types' argument but received ${types}`);
+
+        /** Key on which all local data is stored
+         *    Data in local storage may be grouped by appending suffixes to this key
+         *    Once deployed to production, extensive preparation will be required if this key is to be changed
+         *
+         * @property {string} key
+         */
         this.key = key;
 
         /** **JavaScript** `Map` storing containers for all data types
@@ -218,22 +230,71 @@ class DataStorage {
     /** Read items from local storage
      *    Returns `null` if data in local storage is not truthy
      *    Otherwise returns result of decrypt()
+     *
      * @param {string} key
      *
-     * @returns {(string|null)}
+     * @returns {PromiseLike&lt;(string|null)>}
      *
-     * @private
+     * TODO Implement server data loading when no local data found
      */
-    _read(key) {}
+    static async read(key) {
+        try {
+            //  All local data is encrypted
+            let cipher = localStorage.getItem(key);
+
+            if(cipher === null) {
+                console.log(`No local data found under ${key}`);
+
+                let loadRemote = confirm(`No data stored locally under data key ${key}\n\nLoad data file from server?`);
+                if(!loadRemote) {
+                    console.log(`User has elected not to load data from remote file for key ${key}`);
+
+                    //  Return a JSON string representing an empty object
+                    return '{}';
+                }
+
+                //  Load remote data file, save locally under `key`, and return data string
+                alert('Loading remote data is not yet implemented\nAborting');
+
+                //  Else reject with reason to indicate why sync failed
+                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key ${key}`);
+            }
+
+            return DataStorage.decrypt(cipher);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorReadLocalData(`Error retrieving data from local storage key ${key}`, er);
+
+            throw er;
+        }
+    }
 
     /** Write items to local storage
+     *    Returns hash digest of **the data string written to disk (not the data in memory)**
      *
      * @param {string} key
-     * @param {object} data
+     * @param {string|object} data
      *
-     * @private
+     * @returns {PromiseLike&lt;string>}
      */
-    _write(key, data) {}
+    static async write(key, data) {
+        try {
+            if(!(data instanceof String || typeof data === 'string'))
+                data = DataStorage.serialize(data);
+
+            let str = await DataStorage.encrypt(data);
+            localStorage.setItem(key, str);
+
+            return DataStorage.hash(str);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key ${key}`, er);
+
+            throw er;
+        }
+    }
 
 
     /** ##SECTION - Sync local storage with remote data file
@@ -302,33 +363,49 @@ class DataStorage {
      */
 
     /** Initiate hash digest of string values
-     *    String to be hashed may be provided
-     *    If not, data in memory
+     *    Implemented to allow static `_write()` method to return hash digest
+     *    String to be hashed **must** be provided
      *    Hash algorithm may be specified; defaults to SHA-256
      *
-     *    Adopted from MDN SubtleCrypto.digest() reference:
-     *    https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
+     *    Adopted from [MDN SubtleCrypto.digest() reference][subtle-crypto digest]
      *
-     * @param {string} [str=`_dataString`] - The string to be hashed
-     * @param {string} [algo=SHA-256] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     * [subtle-crypto digest]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
+     *      "SubtleCrypto.digest() - MDN - (circa) November 25, 2018"
+     *
+     * @param {string} str - The string to be hashed
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     *
+     * @returns {Promise&lt;string>} Resolves to the string hash digest
+     */
+    static async hash(str, algo = 'SHA-256') {
+        // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
+
+        try {
+            //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
+            let buf = new TextEncoder('utf-8').encode(str);
+
+            let digest = await window.crypto.subtle.digest(algo, buf);
+            return toHexString(digest);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorComputHashDigest('Error computing hash digest', er);
+
+            throw er;
+        }
+    }
+    /** Private instance implementation of hash digest
+     *    Implemented to allow other instance methods to use data in memory as default value
+     *
+     * @param {string} str - The string to be hashed
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise&lt;string>} Resolves to the string hash digest
      *
      * @private
      */
-    async _hash(str = this._dataString, algo = 'SHA-256') {
-        // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
-
-        //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
-        let buf = new TextEncoder('utf-8').encode(str);
-
-        try {
-            let digest = await window.crypto.subtle.digest(algo, buf);
-            return toHexString(digest);
-        }
-        catch(er) {
-            throw new Error(`Error computing hash digest:\n${er}`);
-        }
+    async _hash(str = this._dataString, algo) {
+        return DataStorage.hash(this._dataString, algo);
     }
 
 
@@ -392,7 +469,7 @@ class DataStorage {
      * @param {string} plaintext - Data string to be encrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
-     * @returns {PromiseLike&lt;AesGcmCipher>} The encrypted cipher object
+     * @returns {PromiseLike&lt;string>} The encrypted cipher object
      */
     static async encrypt(plaintext, password = 'password') {
         let enc = new TextEncoder();
@@ -510,19 +587,19 @@ class DataStorage {
      * @throws DSErrorParseJSON
      */
     static parse(jstr, reviver) {
-            try {
-                return JSON.parse(jstr);
-            }
-            catch(er) {
-                throw new Error(`JSON parse() error:\n${er}`);
-            }
+        try {
+            return JSON.parse(jstr);
         }
+        catch(er) {
+            throw new DSErrorParseJSON(`Failed to parse ${jstr}`, er);
+        }
+    }
 
     /** Serialize a JavaScrip Object into a string
      *    Presently just an alias for `JSON.parse()`
      *
-     * @param {string} val - The string to be parsed
-     * @param {function} [replacer] - A function that replaces property values with alternate data for parsing
+     * @param {object} val - The object to be serialized
+     * @param {function} [replacer] - A function that replaces property values with alternate data before serializing
      *
      * @returns {string}
      *
@@ -533,7 +610,7 @@ class DataStorage {
             return JSON.stringify(val);
         }
         catch(er) {
-            throw new Error(`JSON stringify() error:\n${er}`);
+            throw new DSErrorSerializeJSON(`Failed to serialize ${val}`, er);
         }
     }
 
@@ -555,13 +632,16 @@ class DataStorage {
             for(let [type, container] of this._types.entries()) {
                 jobj[type.name] = container;
             }
+
+            //  Return the serialized container object
+            return DataStorage.serialize(jobj);
         }
         catch(er) {
-            throw new DSErrorCompileDataString(`Error compiling data string:\n${er}`);
-        }
+            if(!(er instanceof DSError))
+                er = new DSErrorCompileDataString('Failed to compile data string', er);
 
-        //  Return the serialized container object
-        return DataStorage.serialize(jobj);
+            throw er;
+        }
     }
 
 
@@ -615,7 +695,12 @@ class DataStorage {
  * @returns {Uint8Array}
  */
 function fromHexString(hexString) {
-    return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    try {
+        return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    }
+    catch(er) {
+        throw new DSErrorConvertFromHexString(`Failed to convert ${hexString} to ArrayBuffer instance`, er);
+    }
 }
 
 /** Convert an array of 8-bit integers to a string of hexadecimal characters
@@ -629,39 +714,149 @@ function fromHexString(hexString) {
  * @returns {string}
  */
 function toHexString(bytes) {
-    if(bytes instanceof ArrayBuffer)
-        bytes = new Uint8Array(bytes);
-
     try {
+        if(bytes instanceof ArrayBuffer)
+            bytes = new Uint8Array(bytes);
+
         return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
     }
     catch(er) {
-        console.log(er, bytes);
+        throw new DSErrorConvertToHexString(`Failed to convert ${bytes} to hex string`, er);
+    }
+}
+
+/** Abstract class overrides built-in `toString()`
+ *    DSError instances can be constructed but will be less useful than a context-specific subclass
+ *
+ * @param {string} message - message describing this error
+ * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+ *
+ * @abstract
+ */
+class DSError extends Error {
+    constructor(message, source) {
+        super(message);
+
+        this.source = source;
+
+        console.trace();
+    }
+
+    toString() {
+        return `${this.constructor.name}${this.message?`: ${this.message}`:''}${this.source?`\n${this.source}`:''}`;
+    }
+}
+
+/** Error thrown when `hash()` fails
+ *
+ */
+class DSErrorComputHashDigest extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when `fromHextString()` fails
+ *
+ */
+class DSErrorConvertFromHexString extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `toHextString()` fails
+ *
+ */
+class DSErrorConvertToHexString extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when `localStorage` fails to read a given key
+ *
+ */
+class DSErrorReadLocalData extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `localStorage` fails to write to a given key
+ *
+ */
+class DSErrorWriteLocalStorage extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when no local data is found and remote data load fails
+ *
+ */
+class DSErrorRemoteDataLoad extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 
 /** Error thrown when `JSON` fails to serialize an object
- * @extends Error
+ *
  */
-class DSErrorSerializeJSON extends Error {
-    constructor(...args) {
-        super(...args);
+class DSErrorSerializeJSON extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 /** Error thrown when `JSON` fails to parse a string
- * @extends Error
+ *
  */
-class DSErrorParseJSON extends Error {
-    constructor(...args) {
-        super(...args);
+class DSErrorParseJSON extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 /** Error thrown when `DataStorage` fails to compile a data string
- * @extends Error
+ *
  */
-class DSErrorCompileDataString extends Error {
-    constructor(...args) {
-        super(...args);
+class DSErrorCompileDataString extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 
@@ -800,7 +995,7 @@ class DSErrorCompileDataString extends Error {
 <span class="jsdoc-message">
 	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a>
 	
-		on Sat Mar 9th 2019
+		on Sun Mar 10th 2019
 	
 	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
 </span>
