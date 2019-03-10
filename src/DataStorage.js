@@ -117,7 +117,13 @@ class DataStorage {
      * @private
      * @readonly
      */
-    get _newID() {}
+    get _newID() {
+        let id = Date.now();
+        if(id <= this._maxID)
+            id = this._maxID + 1;
+
+        return id;
+    }
 
 
     /** ##SECTION - Data initialization
