@@ -14,6 +14,18 @@ class DataStorage {
      * @param {function[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
      */
     constructor(key, types) {
+        if(!(key instanceof String || typeof key === 'string'))
+            throw new TypeError(`DataStorage constructor expects a string 'key' argument but received ${key}`);
+
+        if(!Array.isArray(types))
+            throw new TypeError(`DataStorage constructor expects an array 'types' argument but received ${types}`);
+
+        /** Key on which all local data is stored
+         *    Data in local storage may be grouped by appending suffixes to this key
+         *    Once deployed to production, extensive preparation will be required if this key is to be changed
+         *
+         * @property {string} key
+         */
         this.key = key;
 
         /** **JavaScript** `Map` storing containers for all data types
@@ -233,15 +245,18 @@ class DataStorage {
     async _hash(str = this._dataString, algo = 'SHA-256') {
         // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
 
-        //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
-        let buf = new TextEncoder('utf-8').encode(str);
-
         try {
+            //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
+            let buf = new TextEncoder('utf-8').encode(str);
+
             let digest = await window.crypto.subtle.digest(algo, buf);
             return toHexString(digest);
         }
         catch(er) {
-            throw new Error(`Error computing hash digest:\n${er}`);
+            if(!(er instanceof DSError))
+                er = new DSErrorComputHashDigest('Error computing hash digest', er);
+
+            throw er;
         }
     }
 
@@ -424,13 +439,13 @@ class DataStorage {
      * @throws DSErrorParseJSON
      */
     static parse(jstr, reviver) {
-            try {
-                return JSON.parse(jstr);
-            }
-            catch(er) {
-                throw new Error(`JSON parse() error:\n${er}`);
-            }
+        try {
+            return JSON.parse(jstr);
         }
+        catch(er) {
+            throw new DSErrorParseJSON(`Failed to parse ${jstr}`, er);
+        }
+    }
 
     /** Serialize a JavaScrip Object into a string
      *    Presently just an alias for `JSON.parse()`
@@ -447,7 +462,7 @@ class DataStorage {
             return JSON.stringify(val);
         }
         catch(er) {
-            throw new Error(`JSON stringify() error:\n${er}`);
+            throw new DSErrorSerializeJSON(`Failed to serialize ${val}`, er);
         }
     }
 
@@ -474,8 +489,8 @@ class DataStorage {
             return DataStorage.serialize(jobj);
         }
         catch(er) {
-            if(!er instanceof DSError)
-                er = new DSErrorCompileDataString(`Error compiling data string:\n${er}`);
+            if(!(er instanceof DSError))
+                er = new DSErrorCompileDataString('Failed to compile data string', er);
 
             throw er;
         }
@@ -536,7 +551,7 @@ function fromHexString(hexString) {
         return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
     }
     catch(er) {
-        throw new DSErrorConvertFromHexString(`input: ${hexString}\nerror: ${er}`);
+        throw new DSErrorConvertFromHexString(`Failed to convert ${hexString} to ArrayBuffer instance`, er);
     }
 }
 
@@ -558,21 +573,42 @@ function toHexString(bytes) {
         return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
     }
     catch(er) {
-        throw new DSErrorConvertToHexString(`input: ${bytes}\nerror: ${er}`);
+        throw new DSErrorConvertToHexString(`Failed to convert ${bytes} to hex string`, er);
     }
 }
 
 /** Abstract class overrides built-in `toString()`
+ *    DSError instances can be constructed but will be less useful than a context-specific subclass
  *
+ * @param {string} message - message describing this error
+ * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+ *
+ * @abstract
  */
 class DSError extends Error {
-    constructor(type, ...args) {
-        super(type, ...args);
+    constructor(message, source) {
+        super(message);
+
+        this.source = source;
+
         console.trace();
     }
 
     toString() {
-        return `${this.constructor.name}: ${this.message}`;
+        return `${this.constructor.name}${this.message?`: ${this.message}`:''}${this.source?`\n${this.source}`:''}`;
+    }
+}
+
+/** Error thrown when `hash()` fails
+ *
+ */
+class DSErrorComputHashDigest extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 
@@ -580,16 +616,24 @@ class DSError extends Error {
  *
  */
 class DSErrorConvertFromHexString extends DSError {
-    constructor(...args) {
-        super(...args);
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 /** Error thrown when `toHextString()` fails
  *
  */
 class DSErrorConvertToHexString extends DSError {
-    constructor(...args) {
-        super(...args);
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 
@@ -597,24 +641,36 @@ class DSErrorConvertToHexString extends DSError {
  *
  */
 class DSErrorSerializeJSON extends DSError {
-    constructor(...args) {
-        super(...args);
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 /** Error thrown when `JSON` fails to parse a string
  *
  */
 class DSErrorParseJSON extends DSError {
-    constructor(...args) {
-        super(...args);
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 /** Error thrown when `DataStorage` fails to compile a data string
  *
  */
 class DSErrorCompileDataString extends DSError {
-    constructor(...args) {
-        super(...args);
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
     }
 }
 
