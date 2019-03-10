@@ -144,22 +144,71 @@ class DataStorage {
     /** Read items from local storage
      *    Returns `null` if data in local storage is not truthy
      *    Otherwise returns result of decrypt()
+     *
      * @param {string} key
      *
-     * @returns {(string|null)}
+     * @returns {PromiseLike<(string|null)>}
      *
-     * @private
+     * TODO Implement server data loading when no local data found
      */
-    _read(key) {}
+    static async read(key) {
+        try {
+            //  All local data is encrypted
+            let cipher = localStorage.getItem(key);
+
+            if(cipher === null) {
+                console.log(`No local data found under ${key}`);
+
+                let loadRemote = confirm(`No data stored locally under data key ${key}\n\nLoad data file from server?`);
+                if(!loadRemote) {
+                    console.log(`User has elected not to load data from remote file for key ${key}`);
+
+                    //  Return a JSON string representing an empty object
+                    return '{}';
+                }
+
+                //  Load remote data file, save locally under `key`, and return data string
+                alert('Loading remote data is not yet implemented\nAborting');
+
+                //  Else reject with reason to indicate why sync failed
+                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key ${key}`);
+            }
+
+            return DataStorage.decrypt(cipher);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorReadLocalData(`Error retrieving data from local storage key ${key}`, er);
+
+            throw er;
+        }
+    }
 
     /** Write items to local storage
+     *    Returns hash digest of **the data string written to disk (not the data in memory)**
      *
      * @param {string} key
-     * @param {object} data
+     * @param {string|object} data
      *
-     * @private
+     * @returns {PromiseLike<string>}
      */
-    _write(key, data) {}
+    static async write(key, data) {
+        try {
+            if(!(data instanceof String || typeof data === 'string'))
+                data = DataStorage.serialize(data);
+
+            let str = await DataStorage.encrypt(data);
+            localStorage.setItem(key, str);
+
+            return DataStorage.hash(str);
+        }
+        catch(er) {
+            if(!(er instanceof DSError))
+                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key ${key}`, er);
+
+            throw er;
+        }
+    }
 
 
     /** ##SECTION - Sync local storage with remote data file
@@ -228,6 +277,7 @@ class DataStorage {
      */
 
     /** Initiate hash digest of string values
+     *    Implemented to allow static `_write()` method to return hash digest
      *    String to be hashed **must** be provided
      *    Hash algorithm may be specified; defaults to SHA-256
      *
@@ -333,7 +383,7 @@ class DataStorage {
      * @param {string} plaintext - Data string to be encrypted
      * @param {string} [password='password'] - The password to be used as the cryptographic key
      *
-     * @returns {PromiseLike<AesGcmCipher>} The encrypted cipher object
+     * @returns {PromiseLike<string>} The encrypted cipher object
      */
     static async encrypt(plaintext, password = 'password') {
         let enc = new TextEncoder();
@@ -462,8 +512,8 @@ class DataStorage {
     /** Serialize a JavaScrip Object into a string
      *    Presently just an alias for `JSON.parse()`
      *
-     * @param {string} val - The string to be parsed
-     * @param {function} [replacer] - A function that replaces property values with alternate data for parsing
+     * @param {object} val - The object to be serialized
+     * @param {function} [replacer] - A function that replaces property values with alternate data before serializing
      *
      * @returns {string}
      *
@@ -640,6 +690,44 @@ class DSErrorConvertFromHexString extends DSError {
  *
  */
 class DSErrorConvertToHexString extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when `localStorage` fails to read a given key
+ *
+ */
+class DSErrorReadLocalData extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `localStorage` fails to write to a given key
+ *
+ */
+class DSErrorWriteLocalStorage extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when no local data is found and remote data load fails
+ *
+ */
+class DSErrorRemoteDataLoad extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
      * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated

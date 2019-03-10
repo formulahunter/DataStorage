@@ -30,7 +30,7 @@
             window.data = new DataStorage('mealplan', [Ingredient, Recipe, Meal]);
 
             //  Define a local data cache for demonstration
-            let local = 'someData';
+            let local = 'some data';
 
             //  Compute hash digest of local data
             console.log('computing hash digest of local data');
@@ -52,6 +52,19 @@
 
             //  Output the result of the decryption
             console.log('decrypted plaintext:', plaintext);
+
+            //  Save local data to disk with key 'demo'
+            let key = 'demo';
+            let newHash = await DataStorage.write(key, local);
+
+            //  Output the result of the write operation
+            console.log('local storage data hash:', newHash);
+
+            //  Read local data from disk
+            let dataStr = await DataStorage.read(key);
+
+            //  Output the data read from disk
+            console.log('data read from local storage:', dataStr);
         }
 
         /** Demonstration of JavaScript `async` and `await` declarations
