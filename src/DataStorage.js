@@ -228,21 +228,20 @@ class DataStorage {
      */
 
     /** Initiate hash digest of string values
-     *    String to be hashed may be provided
-     *    If not, data in memory
+     *    String to be hashed **must** be provided
      *    Hash algorithm may be specified; defaults to SHA-256
      *
-     *    Adopted from MDN SubtleCrypto.digest() reference:
-     *    https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
+     *    Adopted from [MDN SubtleCrypto.digest() reference][subtle-crypto digest]
      *
-     * @param {string} [str=`_dataString`] - The string to be hashed
-     * @param {string} [algo=SHA-256] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     * [subtle-crypto digest]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
+     *      "SubtleCrypto.digest() - MDN - (circa) November 25, 2018"
+     *
+     * @param {string} str - The string to be hashed
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise<string>} Resolves to the string hash digest
-     *
-     * @private
      */
-    async _hash(str = this._dataString, algo = 'SHA-256') {
+    static async hash(str, algo = 'SHA-256') {
         // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
 
         try {
@@ -258,6 +257,19 @@ class DataStorage {
 
             throw er;
         }
+    }
+    /** Private instance implementation of hash digest
+     *    Implemented to allow other instance methods to use data in memory as default value
+     *
+     * @param {string} str - The string to be hashed
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     *
+     * @returns {Promise<string>} Resolves to the string hash digest
+     *
+     * @private
+     */
+    async _hash(str = this._dataString, algo) {
+        return DataStorage.hash(this._dataString, algo);
     }
 
 
