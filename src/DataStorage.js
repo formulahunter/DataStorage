@@ -1,11 +1,11 @@
 /** @file `DataStorage` class and types
  *  @author Hunter Gayden
- *  @since 3/3/2019
+ *  @since March 3, 2019
  */
 
 /** The `DataStorage` class provides an abstract interface to an advanced data storage pattern designed to be both fast and robust
  *
- * @since 11/25/2018
+ * @since November 25, 2019
  */
 class DataStorage {
     /** @constructor
@@ -57,13 +57,67 @@ class DataStorage {
     }
 
 
-    /** #PUBLIC API
-     *   init()
+    /** ##SECTION - Maintain last-sync parameter
      *
-     *   save()
-     *   edit()
-     *   delete()
+     *  private get _lastSync()
+     *  private set _lastSync()
      */
+
+    /** Get timestamp of the most recent successful sync
+     *    Returns 0 if `{this.key}-sync` does not exist in local storage
+     *
+     * @returns {number} The timestamp of the most recent successful sync, or 0 if parameter not found in local storage
+     *
+     * @private
+     */
+    get _lastSync() {
+        try {
+            let sync = localStorage.getItem(`${this.key}-sync`);
+            if(sync === null)
+                return 0;
+
+            return Number(sync);
+        }
+        catch(er) {
+            throw new DSErrorGetLastSync(`Error reading \`${this.key}-sync\` from local storage`, er);
+        }
+    }
+    /** Set timestamp of the most recent successful sync
+     *
+     * @param {number} sync - the timestamp at which the successful sync ccurred
+     *
+     * @private
+     */
+    set _lastSync(sync) {
+        try {
+            if(sync === true || sync === false || sync === undefined || sync === null)
+                throw new TypeError('.lastSync cannot be `true`, `false`, `undefined`, or `null`');
+            if(Array.isArray(sync))
+                throw new TypeError('.lastSync cannot be an array');
+            if(Number.isNaN(Number(sync)) || !Number.isInteger(Number(sync)))
+                throw new TypeError('.lastSync must be an integer, or a string that can be parsed to an integer');
+
+            localStorage.setItem(`${this.key}-sync`, sync.toString());
+        }
+        catch(er) {
+            throw new DSErrorSetLastSync(`Error writing last-sync parameter ${sync} to local storage key \`${this.key}-sync\``, er);
+        }
+    }
+
+
+    /** ##SECTION - ID assignment
+     *
+     *  private get _newID()
+     */
+
+    /** Ensure that no two data instances are assigned the same id during batch saves
+     *
+     * @returns {number} The smallest integer greater than or equal to the current timestamp which has not already been assigned as an ID to another data instance
+     *
+     * @private
+     * @readonly
+     */
+    get _newID() {}
 
 
     /** ##SECTION - Data initialization
@@ -83,62 +137,30 @@ class DataStorage {
      */
 
     /** Save new data instance
-     * @param {ModelClass} inst - The data instance to be saved
+     * @param {DSDataClass} inst - The data instance to be saved
      *
      * @returns {Promise<SyncResult>}
      */
     save(inst) {}
 
     /** Edit existing data instance
-     * @param {ModelClass} inst
+     * @param {DSDataClass} inst
      *
      * @returns {Promise<SyncResult>}
      */
     edit(inst) {}
 
     /** Delete data instance
-     * @param {ModelClass} inst
+     * @param {DSDataClass} inst
      *
      * @returns {Promise<SyncResult>}
      */
     delete(inst) {}
 
 
-    /** #PRIVATE API
-     *  Local storage
-     *   _read()
-     *   _write()
-     *
-     *   _sync()
-     *   _compareHash()
-     *   _reconcile()
-     *   _resolve()
-     *
-     *  _hash()
-     *  _buffString()
-     *
-     *  _xhrGet()
-     *  _xhrPost()
-     *
-     *  _encrypt()
-     *  _decrypt()
-     *
-     *  _parse()
-     *  _serialize
-     *  get _dataString()
-     *
-     *   get _lastSync()
-     *   set _lastSync()
-     *
-     *   get _dataString()
-     *
-     *   get _newID()
-     */
-
-
     /** ##SECTION - Local storage interface
-     *   _read()
-     *   _write()
+     *   static async read()
+     *   static async write()
      */
 
     /** Read items from local storage
@@ -171,14 +193,14 @@ class DataStorage {
                 alert('Loading remote data is not yet implemented\nAborting');
 
                 //  Else reject with reason to indicate why sync failed
-                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key ${key}`);
+                throw new DSErrorRemoteDataLoad(`Failed to load remote data for key \`${key}\``);
             }
 
             return DataStorage.decrypt(cipher);
         }
         catch(er) {
             if(!(er instanceof DSError))
-                er = new DSErrorReadLocalData(`Error retrieving data from local storage key ${key}`, er);
+                er = new DSErrorReadLocalData(`Error retrieving data from local storage key \`${key}\``, er);
 
             throw er;
         }
@@ -204,7 +226,7 @@ class DataStorage {
         }
         catch(er) {
             if(!(er instanceof DSError))
-                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key ${key}`, er);
+                er = new DSErrorWriteLocalStorage(`Failed to write ${data} to key \`${key}\``, er);
 
             throw er;
         }
@@ -272,8 +294,8 @@ class DataStorage {
 
     /** ##SECTION - Compute cryptographic hash digests
      *
-     *  _hash()
-     *  _getString()
+     *  static async hash()
+     *  static async _dataString()
      */
 
     /** Initiate hash digest of string values
@@ -303,7 +325,7 @@ class DataStorage {
         }
         catch(er) {
             if(!(er instanceof DSError))
-                er = new DSErrorComputHashDigest('Error computing hash digest', er);
+                er = new DSErrorComputeHashDigest(`Error computing hash digest of string ${str} with ${algo} algorithm`, er);
 
             throw er;
         }
@@ -319,14 +341,14 @@ class DataStorage {
      * @private
      */
     async _hash(str = this._dataString, algo) {
-        return DataStorage.hash(this._dataString, algo);
+        return DataStorage.hash(str, algo);
     }
 
 
     /** ##SECTION - Dispatch XHR GET and POST requests
      *
-     *  _xhrGet()
-     *  _xhrPost()
+     *  static async xhrGet()
+     *  static async xhrPost()
      */
 
     /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
@@ -455,17 +477,8 @@ class DataStorage {
 
     /** ##SECTION - Encryption
      *
-     *  _encrypt()
-     *  _decrypt()
-     */
-
-    /** AES-GCM cipher object
-     *
-     * @typedef {object} AesGcmCipher
-     *
-     * @property {string} salt
-     * @property {string} iv
-     * @property {string} text
+     *  static async encrypt()
+     *  static async decrypt()
      */
 
     /** Encrypt a string with a given password
@@ -657,69 +670,6 @@ class DataStorage {
             throw er;
         }
     }
-
-
-    /** ##SECTION - Maintain last-sync parameter
-     *
-     *  get _lastSync()
-     *  set _lastSync()
-     */
-
-    /** Get timestamp of the most recent successful sync
-     *    Returns 0 if `{this.key}-sync` does not exist in local storage
-     *
-     * @returns {number} The timestamp of the most recent successful sync, or 0 if parameter not found in local storage
-     *
-     * @private
-     */
-    get _lastSync() {
-        try {
-            let sync = localStorage.getItem(`${this.key}-sync`);
-            if(sync === null)
-                return 0;
-
-            return Number(sync);
-        }
-        catch(er) {
-            throw new DSErrorGetLastSync(`Error reading \`${this.key}-sync\` from local storage`, er);
-        }
-    }
-    /** Set timestamp of the most recent successful sync
-     *
-     * @param {number} sync
-     *
-     * @private
-     */
-    set _lastSync(sync) {
-        try {
-            if(sync === true || sync === false || sync === undefined || sync === null)
-                throw new TypeError('.lastSync cannot be `true`, `false`, `undefined`, or `null`');
-            if(Array.isArray(sync))
-                throw new TypeError('.lastSync cannot be an array');
-            if(Number.isNaN(Number(sync)) || !Number.isInteger(Number(sync)))
-                throw new TypeError('.lastSync must be an integer, or a string that can be parsed to an integer');
-
-            localStorage.setItem(`${this.key}-sync`, sync.toString());
-        }
-        catch(er) {
-            throw new DSErrorSetLastSync(`Error writing last-sync parameter ${sync} to local storage key \`${this.key}-sync\``, er);
-        }
-    }
-
-
-    /** ##SECTION - ID assignment
-     *
-     *  get _newID()
-     */
-
-    /** Ensure that no two data instances are assigned the same id during batch saves
-     *
-     * @returns {number} The smallest integer greater than or equal to the current timestamp which has not already been assigned as an ID to another data instance
-     *
-     * @private
-     * @readonly
-     */
-    get _newID() {}
 }
 
 /** Convert a string of hexadecimal characters to a `Uint8Array`
@@ -763,7 +713,7 @@ function toHexString(bytes) {
     }
 }
 
-/** Abstract class overrides built-in `toString()`
+/** Abstract class implements constructor and overrides built-in `toString()`
  *    DSError instances can be constructed but will be less useful than a context-specific subclass
  *
  * @param {string} message - message describing this error
@@ -788,7 +738,7 @@ class DSError extends Error {
 /** Error thrown when `hash()` fails
  *
  */
-class DSErrorComputHashDigest extends DSError {
+class DSErrorComputeHashDigest extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
      * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
@@ -798,7 +748,7 @@ class DSErrorComputHashDigest extends DSError {
     }
 }
 
-/** Error thrown when `fromHextString()` fails
+/** Error thrown when `fromHexString()` fails
  *
  */
 class DSErrorConvertFromHexString extends DSError {
