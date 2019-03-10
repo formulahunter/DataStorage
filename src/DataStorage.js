@@ -469,13 +469,16 @@ class DataStorage {
             for(let [type, container] of this._types.entries()) {
                 jobj[type.name] = container;
             }
+
+            //  Return the serialized container object
+            return DataStorage.serialize(jobj);
         }
         catch(er) {
-            throw new DSErrorCompileDataString(`Error compiling data string:\n${er}`);
-        }
+            if(!er instanceof DSError)
+                er = new DSErrorCompileDataString(`Error compiling data string:\n${er}`);
 
-        //  Return the serialized container object
-        return DataStorage.serialize(jobj);
+            throw er;
+        }
     }
 
 
@@ -529,7 +532,12 @@ class DataStorage {
  * @returns {Uint8Array}
  */
 function fromHexString(hexString) {
-    return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    try {
+        return new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    }
+    catch(er) {
+        throw new DSErrorConvertFromHexString(`input: ${hexString}\nerror: ${er}`);
+    }
 }
 
 /** Convert an array of 8-bit integers to a string of hexadecimal characters
@@ -543,37 +551,68 @@ function fromHexString(hexString) {
  * @returns {string}
  */
 function toHexString(bytes) {
-    if(bytes instanceof ArrayBuffer)
-        bytes = new Uint8Array(bytes);
-
     try {
+        if(bytes instanceof ArrayBuffer)
+            bytes = new Uint8Array(bytes);
+
         return bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '');
     }
     catch(er) {
-        console.log(er, bytes);
+        throw new DSErrorConvertToHexString(`input: ${bytes}\nerror: ${er}`);
+    }
+}
+
+/** Abstract class overrides built-in `toString()`
+ *
+ */
+class DSError extends Error {
+    constructor(type, ...args) {
+        super(type, ...args);
+        console.trace();
+    }
+
+    toString() {
+        return `${this.constructor.name}: ${this.message}`;
+    }
+}
+
+/** Error thrown when `fromHextString()` fails
+ *
+ */
+class DSErrorConvertFromHexString extends DSError {
+    constructor(...args) {
+        super(...args);
+    }
+}
+/** Error thrown when `toHextString()` fails
+ *
+ */
+class DSErrorConvertToHexString extends DSError {
+    constructor(...args) {
+        super(...args);
     }
 }
 
 /** Error thrown when `JSON` fails to serialize an object
- * @extends Error
+ *
  */
-class DSErrorSerializeJSON extends Error {
+class DSErrorSerializeJSON extends DSError {
     constructor(...args) {
         super(...args);
     }
 }
 /** Error thrown when `JSON` fails to parse a string
- * @extends Error
+ *
  */
-class DSErrorParseJSON extends Error {
+class DSErrorParseJSON extends DSError {
     constructor(...args) {
         super(...args);
     }
 }
 /** Error thrown when `DataStorage` fails to compile a data string
- * @extends Error
+ *
  */
-class DSErrorCompileDataString extends Error {
+class DSErrorCompileDataString extends DSError {
     constructor(...args) {
         super(...args);
     }
