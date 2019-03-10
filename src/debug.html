@@ -65,6 +65,19 @@
 
             //  Output the data read from disk
             console.log('data read from local storage:', dataStr);
+
+            //  Issue XMLHttpRequest for server data file
+            let dataFile = await DataStorage.xhrGet('data/demo.json', [{header: 'If-Modified-Since', value: '0'}]);
+
+            //  Output the data fetched from the server file
+            console.log('data fetched from server:', dataFile);
+
+            //  POST data to server via XMLHttpRequest
+            let time = (new Date()).toUTCString();
+            let response = await DataStorage.xhrPost({[time]: 'OMG more data'}, 'add.php');
+
+            //  Output the server response to POST request
+            console.log('server response:', response);
         }
 
         /** Demonstration of JavaScript `async` and `await` declarations

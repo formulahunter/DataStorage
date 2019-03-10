@@ -1,9 +1,6 @@
 //  Ignore WebStorm project directory
 .idea/*
 
-//  Ignore user data files
-data/*
-
 //  Ignore Git message files
 message*.*
 commit-message.md

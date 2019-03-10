@@ -329,18 +329,67 @@ class DataStorage {
      *  _xhrPost()
      */
 
-    /** Dispatch XMLHttpRequests with the GET method
+    /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
      *
      * @param {string} url - The URL of the request target file
-     * @param {string[]} [headers=[]] - An array of request headers to be set on the XHR object before it is sent
+     * @param {object[]} [headers=[]] - An array of request headers to be set on the XHR object before it is sent
      *
      * @returns {Promise<object>} Resolves to the value of the server response
      *
      * @private
      */
-    _xhrGet(url, headers = []) {}
+    static async xhrGet(url, headers = []) {
+        try {
+            return new Promise(function(resolve, reject) {
+                //  Open a new XHR request
+                let request = new XMLHttpRequest();
 
-    /** Dispatch XMLHttpRequests with the POST method
+                request.onerror = function(er) {
+                    if(!(er instanceof DSError))
+                        er = new DSErrorXhrGetRequest(`XHR GET request for ${url} encountered an error`, er);
+
+                    throw er;
+                };
+
+                //  Notice that the request is opened before the `load` event handler is defined
+                //  This is done to simplify the onload handler
+                request.open('GET', url);
+
+                //  Set headers if provided
+                headers.forEach(function({header, value}) {
+                    request.setRequestHeader(header, value);
+                });
+
+                //  Define the onload handler
+                //  Since this function is defined after the request is opened, it does not need to check the readyState property of the request
+                //   - Opening a request causes the onload event to fire a few times, at which point the readyState property reflects an earlier phase of the request cycle
+                request.onload = function () {
+                    try {
+                        if(this.statusText === 'OK') {
+                            if(this.responseXML !== null)
+                                resolve(this.responseXML);
+
+                            resolve(this.responseText);
+                        }
+                        else {
+                            throw new DSErrorXhrGetRequestStatus(`GET request loaded with unexpected status ${this.statusText}\nResponse: ${this.response}`);
+                        }
+                    }
+                    catch(er) {
+                        this.onerror(er);
+                    }
+                };
+
+                //  Send the request
+                request.send();
+            });
+        }
+        catch(er) {
+            throw new DSErrorXhrGetRequest(`Error issuing XHR GET to ${url} with headers ${headers}`, er);
+        }
+    }
+
+    /** Dispatch XMLHttpRequests with the POST method to a given URL with specified data and optional headers
      *
      * @param {string} data - The body of the request to be sent
      * @param {string} url - The URL of the request target file
@@ -350,7 +399,58 @@ class DataStorage {
      *
      * @private
      */
-    _xhrPost(data, url, headers = []) {}
+    static async xhrPost(data, url, headers = []) {
+        try {
+            let body = DataStorage.serialize(data);
+
+            return new Promise(function(resolve, reject) {
+                //  Open a new XHR request
+                //  Notice that the request is opened immediately
+                //  This is done to simplify the onload handler
+                let request = new XMLHttpRequest();
+
+                //  Monitor for network errors (different from bad request status checked in 'onload')
+                //  e.g. poor network connection and no response received, a.k.a. 'request timed out'
+                request.onerror = function(er) {
+                    if(!(er instanceof DSError))
+                        er = new DSErrorXhrGetRequest(`POST request for ${url} encountered an error`, er);
+
+                    throw er;
+                };
+
+                request.open('POST', url);
+
+                //  Set request headers if provided
+                headers.forEach(function({header, value}) {
+                    request.setRequestHeader(header, value);
+                });
+
+                //  The onload event handler fires only once the full response has been received (i.e. readystate===4 and statusText===OK)
+                request.onload = function() {
+                    try {
+                        if(this.statusText === 'OK') {
+                            if(request.responseXML !== null)
+                                resolve(request.responseXML);
+
+                            resolve(request.responseText);
+                        }
+                        else {
+                            throw new DSErrorXhrPostRequestStatus(`POST request loaded with unexpected status ${this.statusText}\nResponse: ${this.response}`);
+                        }
+                    }
+                    catch(er) {
+                        this.onerror(er);
+                    }
+                };
+
+                // console.debug(`Sending POST request: ${request}`);
+                request.send(body);
+            })
+        }
+        catch(er) {
+            throw new DSErrorXhrPostRequest(`Error executing XHR POST to ${url} with body ${data} and headers ${headers}`, er);
+        }
+    }
 
 
     /** ##SECTION - Encryption
@@ -728,6 +828,52 @@ class DSErrorWriteLocalStorage extends DSError {
  *
  */
 class DSErrorRemoteDataLoad extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when XHR GET request fails
+ *
+ */
+class DSErrorXhrGetRequest extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when XHR GET request loads with bad status
+ *
+ */
+class DSErrorXhrGetRequestStatus extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when XHR POST request fails
+ *
+ */
+class DSErrorXhrPostRequest extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+class DSErrorXhrPostRequestStatus extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
      * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
