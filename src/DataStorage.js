@@ -713,6 +713,95 @@ function toHexString(bytes) {
     }
 }
 
+
+/** Abstract data/model superclass
+ * @since March 10, 2019
+ *
+ * @abstract
+ */
+class DSDataClass {
+    constructor() {
+        /** `_created` property defined as the timestamp at which the data instance was saved
+         *    Also used as the instance's ID
+         *
+         * @property {(number|boolean)} _created - timestamp, initialized value of `false`
+         * @private
+         */
+        this._created = false;
+        /** `_modified` property defined as the timestamp of the **most recent** modification of a data instance, if any, and otherwise FALSE
+         *
+         * @property {boolean|number} _modified - The timestamp at which the data instance was most recently modified, initialized value of `false`
+         * @private
+         */
+        this._modified = false;
+    }
+
+    /** Return a new `DSDataClass` instance from a JSON string/raw JSON object
+     *    **Note the use of `new this()`**
+     *    This statement constructs a new instance of a subclass invoking `DSDataClass.fromJSON()` with the `super` keyword
+     *    As `fromJSON()` is a `static` method, the `this` keyword refers to the class object/constructor function itself
+     *
+     * @returns {DSDataClass} Initialized data instance
+     */
+    static fromJSON(jobj) {
+        if(jobj instanceof String || typeof jobj === 'string')
+            jobj = DataStorage.parse(jobj);
+
+        let inst = new this();
+
+        inst._created = jobj._created;
+        if(jobj._modified)
+            inst._modified = jobj._modified;
+
+        return inst;
+    }
+
+    /** Public getter method of the instance ID
+     *    ID is defined as the private `_created` property
+     *
+     * @returns {(number|boolean)} - FALSE if not yet defined, otherwise value of the `_created` property
+     *
+     * @readonly
+     */
+    get id() {
+        return this._created;
+    }
+
+    /** Get the JSON text representation of the data instance
+     *
+     * @returns {object}
+     */
+    toJSON() {
+        let jobj = {
+            _created: this._created
+        };
+        if(this._modified)
+            jobj._modified = this._modified;
+
+        return jobj;
+    }
+
+    /** Get a human-readable string representation of the data instance, e.g. for console output
+     *    Formatted to print the class name and ID
+     *
+     * @returns {string}
+     */
+    toString() {
+        return `${this.constructor.name}{${this.id}`;
+    }
+}
+/** Deleted data instance
+ *
+ * @typedef DeletedDataInstance
+ *
+ * @property {number} _created - The timestamp at which the data instance was saved
+ * @private
+ *
+ * @property {number} _deleted - The timestamp at which the data instance was deleted
+ * @private
+ */
+
+
 /** Abstract class implements constructor and overrides built-in `toString()`
  *    DSError instances can be constructed but will be less useful than a context-specific subclass
  *
@@ -932,46 +1021,17 @@ class DSErrorSetLastSync extends DSError {
  * @property {string} ReconcileResult.hash - Hash digest of the server's data file computed after running its reconciliation algorithm
  * @property {ReconcileResult.<string, object>} typeContainer - A container object with data instances of the given type, organized by rank
  * @property {typeContainer.<string, object>} rankContainer - A container object with data instances of the given type and rank, indexed by ID
- * @property {rankContainer.<string, ModelClass>} dataInstance - A data instance of the given type & rank, stored using its ID as a key
+ * @property {rankContainer.<string, DSDataClass>} dataInstance - A data instance of the given type & rank, stored using its ID as a key
  */
 
-/** Data class
+/** AES-GCM cipher object
  *
- * @external ModelClass
+ * @typedef {object} AesGcmCipher
  *
- * @property {number|undefined} _created - The timestamp at which the data instance was saved
- * @private
- *
- * @property {number|undefined} _modified - The timestamp at which the data instance was most recently modified
- * @private
+ * @property {string} salt
+ * @property {string} iv
+ * @property {string} text
  */
-/** Return a new ModelClass instance from a JSON string/raw JSON object
- * @method external:ModelClass.fromJSON
- * @returns {ModelClass}
- */
-/** Public getter method of _created property
- * @method external:ModelClass#id
- * @returns {(number|undefined)}
- */
-/** Return the JSON text representation of the data instance
- * @method external:ModelClass#toJSON
- * @returns {string}
- */
-/** Return a readable string representation of the data instance, e.g. for console output
- * @method external:ModelClass#toString
- *@returns {string}
- */
-/** Deleted data instance
- *
- * @typedef DeletedDataInstance
- *
- * @property {number} _created - The timestamp at which the data instance was saved
- * @private
- *
- * @property {number} _deleted - The timestamp at which the data instance was deleted
- * @private
- */
-
 
 /** Data activity rank
  * 'new', 'modified', 'deleted', or 'conflict'
@@ -987,7 +1047,7 @@ class DSErrorSetLastSync extends DSError {
  *
  * @property {object} [type] - A container object with data instances of the given type, organized by rank
  * @property {object} [type.rank] - Containers for each individual data rank
- * @property {ModelClass} [rank.id] - A data instance of the given type & rank, stored using its ID as a key
+ * @property {DSDataClass} [rank.id] - A data instance of the given type & rank, stored using its ID as a key
  */
 
 /** Data instance container & constructor reference
