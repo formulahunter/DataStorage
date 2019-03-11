@@ -137,35 +137,8 @@ class DataStorage {
      * @returns {object}
      */
     async init() {
-        //  Get local and remote hash digests
-        let remote = DataStorage.xhrGet('hash.php');
+        let sync = await this._sync();
 
-        let jdat = DataStorage.parse(await DataStorage.read(this.key));
-        //  Performance testing showed this method to require 4.05ms whereas the loop below required only 1.83ms
-        //  Considering that the loop below also instantiated all data objects and stored them in the appropriate `_types` array,
-        //  it's safe to say that it is the superior method for finding `_maxID`
-        // console.log(Object.entries(jdat).reduce((max, el) => Math.max(max, el[1].reduce((max, el) => Math.max(max, el._created), 0)), 0));
-
-        let classObj, inst;
-        for(let type in jdat) {
-            if(!jdat.hasOwnProperty(type))
-                continue;
-
-            classObj = window[type];
-            for(let jobj of jdat[type]) {
-                inst = new classObj();
-                inst._created = jobj._created;
-                this._types.get(classObj).push(jobj);
-
-                if(jobj._created > this._maxID)
-                    this._maxID = jobj._created;
-            }
-        }
-
-        let local = this._hash();
-
-        let result = this._compareHash(...await Promise.all([local, remote]));
-        console.log(result);
     }
 
 
@@ -210,27 +183,97 @@ class DataStorage {
      *    On success, return a Promise resolving to an object summarizing the sync
      *    On failure throws an exception
      *
-     * @param {string} local
-     * @param {string} remote
+     * @param {string} [local]
+     * @param {string} [remote]
      *
      * @returns {Promise<SyncResult>}
      *
      * @private
      */
-    _sync(local, remote) {}
+    async _sync(local, remote) {
+        /*  Failure modes
+         *  -------------
+         *
+         *  1. `lastSync` not updated despite matching records in both repositories
+         *      1. Data instance(s) not recorded or recorded in duplicate in either repository
+         *  2. Data instances recorded with different/invalid data types in one or both repositories
+         *
+         */
+
+        //  Initiate asynchronous server hash request in `remote`
+        let remote = DataStorage.xhrGet('hash.php');
+
+        //  Synchronously read and parse local data
+        let jdat = DataStorage.parse(await DataStorage.read(this.key));
+
+        //  Iterate over the type container arrays in `jdat`
+        let classObj, inst;
+        for(let type in jdat) {
+            if(!jdat.hasOwnProperty(type))
+                continue;
+
+            //  Designate the associated class object for each type
+            classObj = window[type];
+
+            //  Iterate through elements in each type container array
+            for(let jobj of jdat[type]) {
+                //  Construct a new instance of `classObj` and assign its `_created` property
+                inst = new classObj();
+                inst._created = jobj._created;
+
+                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
+                this._types.get(classObj).push(jobj);
+
+                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
+                if(jobj._created > this._maxID)
+                    this._maxID = jobj._created;
+            }
+        }
+
+        //  Initiate asynchronous hash digest of local data
+        let local = this._hash();
+
+        //  `await` both asynchronous requests and pass the resolved values to `_compareHash()`
+        [local, remote] = await Promise.all([local, remote]);
+        let result = this._compareHash(local, remote);
+
+        //  If the initial comparison fails, initiate the reconciliation procedure
+        //  **For now just fail the sync**
+        if(!result) {
+            // let reconcile = await this._reconcile();
+            // let result = this._compareHash(local, reconcile);
+
+            throw new DSErrorSync(`Failed to synchronize local and remote data files`, {local, remote});
+        }
+
+        //  At this point, either sync, the reconciliation, or resolution must have succeeded
+        let now = new Date;
+        let time = now.getTime();
+        this._lastSync = time;
+        console.info('Local and remote data synchronized');
+        console.debug(`Successful sync on ${now.toLocaleString()}\nTimestamp: ${time}`);
+
+        //  Define the `sync` property on `result` and resolve the `sync()`
+        result.sync = time;
+        return {hash: remote, sync: time};
+    }
 
     /** Compare two hash values for equality
      *
      * @param {string} local - Local hash digest
      * @param {string} remote - remote hash digest
      *
-     * @returns {Promise<SyncResult>} - An object summarizing the result of the sync operation
+     * @returns {SyncResult} - An object summarizing the result of the sync operation
      *
      * @private
      */
     _compareHash(local, remote) {
         console.log(local, remote);
-        return local === remote;
+
+        if(local === remote)
+            return {hash: remote, sync: Date.now()};
+
+        return {};
     }
 
     /** Reconcile discrepancies
@@ -245,7 +288,7 @@ class DataStorage {
      *
      * @private
      */
-    _reconcile(result) {}
+    async _reconcile() {}
 
     /** Resolve server's reconciliation response
      *
@@ -865,6 +908,19 @@ class DSError extends Error {
     }
 }
 
+/** Error thrown when `sync()` fails
+ *
+ */
+class DSErrorSync extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
 /** Error thrown when `hash()` fails
  *
  */
@@ -1052,9 +1108,9 @@ class DSErrorSetLastSync extends DSError {
 /** Sync result summary type
  *
  * @typedef {object} SyncResult
- * @property {(string|undefined)} [hash] - If sync is successful, the hash of the synchronized data files
- * @property {(number|undefined)} [sync] - If sync is successful, the timestamp at which the sync is recorded
- * @property {(ReconcileResult|undefined)} [resolve] - If a discrepancy was resolved, the resolved data instances
+ * @property {string} [hash] - If sync is successful, the hash of the synchronized data files
+ * @property {number} [sync] - If sync is successful, the timestamp at which the sync is recorded
+ * @property {ReconcileResult} [resolve] - If a discrepancy was resolved, the resolved data instances
  */
 /** Reconcile result summary type
  *
