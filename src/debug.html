@@ -9,26 +9,81 @@
     <script type="text/javascript">
         window.addEventListener('load', main, false);
 
-        class Ingredient {
+        class OneClass extends DSDataClass {
             constructor() {
-
+                super();
             }
         }
-        class Recipe {
+        class TwoClass extends DSDataClass {
             constructor() {
-
+                super();
             }
         }
-        class Meal {
+        class RedClass extends DSDataClass {
             constructor() {
-
+                super();
             }
         }
+        class BlueClass extends DSDataClass {
+            constructor() {
+                super();
+            }
+        }
+        window['OneClass'] = OneClass;
+        window['TwoClass'] = TwoClass;
+        window['RedClass'] = RedClass;
+        window['BlueClass'] = BlueClass;
 
         async function main() {
             //  Define an instance of `DataStorage`
-            window.data = new DataStorage('mealplan', [Ingredient, Recipe, Meal]);
+            window.data = new DataStorage('demo', [OneClass, TwoClass, RedClass, BlueClass]);
 
+            //  Define a small data bank for testing purposes
+            // generateData();
+
+            //  Initialize local data
+            let syncResult = data.init();
+        }
+
+        function generateData() {
+            //  Define a small data bank for testing purposes
+            let one, two, red, blue;
+            for(let i=0; i<9; i++) {
+                red = new RedClass();
+                red._created = data._newID;
+                data._maxID = red._created;
+                data._types.get(RedClass).push(red);
+
+                if(i>6)
+                    continue;
+
+                one = new OneClass();
+                one._created = data._newID;
+                data._maxID = one._created;
+                data._types.get(OneClass).push(one);
+
+                if(i>4)
+                    continue;
+
+                two = new TwoClass();
+                two._created = data._newID;
+                data._maxID = two._created;
+                data._types.get(TwoClass).push(two);
+
+                if(i>2)
+                    continue;
+
+                blue = new BlueClass();
+                blue._created = data._newID;
+                data._maxID = blue._created;
+                data._types.get(BlueClass).push(blue);
+            }
+
+            console.log(data._dataString);
+            DataStorage.write(data.key, data._dataString);
+        }
+
+        async function demo() {
             //  Define a local data cache for demonstration
             let local = 'some data';
 
@@ -87,25 +142,6 @@
 
             //  Output the last-sync value as read from local storage
             console.log('last-sync value from local storage:', lastSync);
-        }
-
-        /** Demonstration of JavaScript `async` and `await` declarations
-         *     The `async` keyword causes a function to return an implicit `Promise`
-         *     The `await` keyword causes execution to pause until a Promise returned by the `await`ed function resolves
-         *
-         * @param str
-         * @param algo
-         * @returns {Promise<string>}
-         */
-        async function hash(str = 'some data', algo = 'SHA-256') {
-            // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
-
-            //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
-            let buf = new TextEncoder('utf-8').encode(str);
-
-            let buff = await window.crypto.subtle.digest(algo, buf);
-            let view = new Uint8Array(buff);
-            return view.reduce((prev, curr) => {return prev.concat(curr.toString(16).padStart(2, '0'))}, '');
         }
     </script>
 </head>

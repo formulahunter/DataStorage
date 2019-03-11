@@ -132,10 +132,41 @@ class DataStorage {
      */
 
     /** Sync data automatically and return parsed JSON data objects
+     *    TEMPORARY IMPLEMENTATION FOR DEVELOPMENT/DEMONSTRATION PURPOSES
      *
      * @returns {object}
      */
-    init() {}
+    async init() {
+        //  Get local and remote hash digests
+        let remote = DataStorage.xhrGet('hash.php');
+
+        let jdat = DataStorage.parse(await DataStorage.read(this.key));
+        //  Performance testing showed this method to require 4.05ms whereas the loop below required only 1.83ms
+        //  Considering that the loop below also instantiated all data objects and stored them in the appropriate `_types` array,
+        //  it's safe to say that it is the superior method for finding `_maxID`
+        // console.log(Object.entries(jdat).reduce((max, el) => Math.max(max, el[1].reduce((max, el) => Math.max(max, el._created), 0)), 0));
+
+        let classObj, inst;
+        for(let type in jdat) {
+            if(!jdat.hasOwnProperty(type))
+                continue;
+
+            classObj = window[type];
+            for(let jobj of jdat[type]) {
+                inst = new classObj();
+                inst._created = jobj._created;
+                this._types.get(classObj).push(jobj);
+
+                if(jobj._created > this._maxID)
+                    this._maxID = jobj._created;
+            }
+        }
+
+        let local = this._hash();
+
+        let result = this._compareHash(...await Promise.all([local, remote]));
+        console.log(result);
+    }
 
 
     /** ##SECTION - Incremental data manipulation
@@ -190,13 +221,17 @@ class DataStorage {
 
     /** Compare two hash values for equality
      *
-     * @param {string[]} hashes - Remote and local hash digests to compare
+     * @param {string} local - Local hash digest
+     * @param {string} remote - remote hash digest
      *
      * @returns {Promise<SyncResult>} - An object summarizing the result of the sync operation
      *
      * @private
      */
-    _compareHash([remote, local]) {}
+    _compareHash(local, remote) {
+        console.log(local, remote);
+        return local === remote;
+    }
 
     /** Reconcile discrepancies
      *    Aggregate all data activity since last sync
@@ -267,7 +302,7 @@ class DataStorage {
      * @param {string} str - The string to be hashed
      * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
-     * @returns {Promise<string>} Resolves to the string hash digest
+     * @returns {PromiseLike<string>} Resolves to the string hash digest
      *
      * @private
      */
@@ -362,7 +397,7 @@ class DataStorage {
      * @param {string} url - The URL of the request target file
      * @param {object[]} [headers=[]] - An array of request headers to be set on the XHR object before it is sent
      *
-     * @returns {Promise<object>} Resolves to the value of the server response
+     * @returns {PromiseLike<object>} Resolves to the value of the server response
      *
      * @private
      */
@@ -423,7 +458,7 @@ class DataStorage {
      * @param {string} url - The URL of the request target file
      * @param {string[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
-     * @returns {Promise<object>} Resolves to the value of the server response
+     * @returns {PromiseLike<object>} Resolves to the value of the server response
      *
      * @private
      */
