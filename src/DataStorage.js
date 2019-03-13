@@ -1214,6 +1214,9 @@ class DSErrorXhrPostRequest extends DSError {
         super(message, source);
     }
 }
+/** Error thrown when XHR POST request loads with a status other than `200`/`OK`
+ *
+ */
 class DSErrorXhrPostRequestStatus extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
