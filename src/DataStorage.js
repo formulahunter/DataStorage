@@ -8,10 +8,9 @@
  * @since November 25, 2019
  */
 class DataStorage {
-    /** @constructor
-     *
+    /**
      * @param {string} key - The key to be used for storing data in localStorage
-     * @param {function[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
+     * @param {DSDataRecordClass[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
      */
     constructor(key, types) {
         if(!(key instanceof String || typeof key === 'string'))
@@ -30,14 +29,14 @@ class DataStorage {
 
         /** **JavaScript** `Map` storing containers for all data types
          *
-         * @property {Map} _created
+         * @property {DSDataRecordContainer} _created
          *
          * @private
          */
         this._types = new Map();
         /** **JavaScript** `Map` storing containers for all data types
          *
-         * @property {Map} _deleted
+         * @property {DSDataDeletedRecordContainer} _deleted
          *
          * @private
          */
@@ -147,23 +146,23 @@ class DataStorage {
      */
 
     /** Save new data instance
-     * @param {DSDataClass} inst - The data instance to be saved
+     * @param {DSDataRecord} inst - The data instance to be saved
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      */
     save(inst) {}
 
     /** Edit existing data instance
-     * @param {DSDataClass} inst
+     * @param {DSDataRecord} inst
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      */
     edit(inst) {}
 
     /** Delete data instance
-     * @param {DSDataClass} inst
+     * @param {DSDataRecord} inst
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      */
     delete(inst) {}
 
@@ -186,7 +185,7 @@ class DataStorage {
      * @param {string} [local]
      * @param {string} [remote]
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      *
      * @private
      */
@@ -263,7 +262,7 @@ class DataStorage {
      * @param {string} local - Local hash digest
      * @param {string} remote - remote hash digest
      *
-     * @returns {SyncResult} - An object summarizing the result of the sync operation
+     * @returns {DSHashComparison} - An object summarizing the result of the sync operation
      *
      * @private
      */
@@ -284,7 +283,7 @@ class DataStorage {
      *
      * @param {object} result
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      *
      * @private
      */
@@ -294,7 +293,7 @@ class DataStorage {
      *
      * @param {object} response
      *
-     * @returns {Promise<SyncResult>}
+     * @returns {Promise<DSSyncResult>}
      *
      * @private
      */
@@ -797,35 +796,74 @@ function toHexString(bytes) {
     }
 }
 
+/** Timestamp type
+ *   Integer greater than (not equal to) 0
+ * typedef {number<int[!0, >]} DSTimestamp   //  Proposed format extension allowing integer type with range constraint ('!' indicates exclusive bound, i.e. value cannot be equal to 0)
+ * @typedef {number} DSTimestamp
+ */
+/** Data record ID type
+ *    ID's are defined as the timestamp at the moment a data instance is saved
+ *
+ * @typedef {DSTimestamp} DSDataRecordID
+ */
+/** Data activity rank type
+ *    One of ('new'|'modified'|'deleted'|'conflict')
+ *
+ * @enum {{NEW: string, MODIFIED: string, DELETED: string, CONFLICT: string}}
+ */
+const DSDataActivityRank = {
+    NEW: 'new',
+    MODIFIED: 'modified',
+    DELETED: 'deleted',
+    CONFLICT: 'conflict'
+};
+Object.freeze(DSDataActivityRank);
+/** Data record class type
+ *    Any of the constructor functions passed to `DataStorage` constructor's `types` argument
+ *
+ * @typedef {function} DSDataRecordClass
+ */
 
-/** Abstract data/model superclass
+
+/** Raw JSON object literal type
+ *
+ * @typedef {object} DSDataJSONRecord
+ *
+ * @property {DSDataRecordID} _created - Timestamp at which the represented data instance was created
+ * @property {DSTimestamp} [_modified] - Timestamp at which the represented data instance was most recently modified
+ */
+
+/** Abstract data instance superclass
  * @since March 10, 2019
  *
+ * @extends DSDataJSONRecord
  * @abstract
  */
-class DSDataClass {
+class DSDataRecord {
     constructor() {
         /** `_created` property defined as the timestamp at which the data instance was saved
          *    Also used as the instance's ID
          *
-         * @property {(number|boolean)} _created - timestamp, initialized value of `false`
+         * @property {DSDataRecordID} _created - Timestamp at which the data instance was created, initialized value of `0`
          * @private
          */
-        this._created = false;
-        /** `_modified` property defined as the timestamp of the **most recent** modification of a data instance, if any, and otherwise FALSE
+        this._created = 0;
+        /** `_modified` property defined as the timestamp of the **most recent** modification of a data instance, if any, and otherwise `0`
          *
-         * @property {boolean|number} _modified - The timestamp at which the data instance was most recently modified, initialized value of `false`
+         * @property {DSTimestamp} [_modified] - Timestamp at which the data instance was most recently modified, initialized value of `0`
          * @private
          */
-        this._modified = false;
+        this._modified = 0;
     }
 
-    /** Return a new `DSDataClass` instance from a JSON string/raw JSON object
+    /** Return a new `DSDataRecord` instance from a JSON string/raw JSON object
      *    **Note the use of `new this()`**
-     *    This statement constructs a new instance of a subclass invoking `DSDataClass.fromJSON()` with the `super` keyword
+     *    This statement constructs a new instance of a subclass invoking `DSDataRecord.fromJSON()` with the `super` keyword
      *    As `fromJSON()` is a `static` method, the `this` keyword refers to the class object/constructor function itself
      *
-     * @returns {DSDataClass} Initialized data instance
+     * @param {DSDataJSONRecord} jobj - The raw JSON object literal
+     *
+     * @returns {DSDataRecord} Initialized data instance
      */
     static fromJSON(jobj) {
         if(jobj instanceof String || typeof jobj === 'string')
@@ -843,7 +881,7 @@ class DSDataClass {
     /** Public getter method of the instance ID
      *    ID is defined as the private `_created` property
      *
-     * @returns {(number|boolean)} - FALSE if not yet defined, otherwise value of the `_created` property
+     * @returns {DSDataRecordID} - The value of the `_created` property
      *
      * @readonly
      */
@@ -851,9 +889,9 @@ class DSDataClass {
         return this._created;
     }
 
-    /** Get the JSON text representation of the data instance
+    /** Get the JSON object literal representation of the data instance
      *
-     * @returns {object}
+     * @returns {DSDataJSONRecord}
      */
     toJSON() {
         let jobj = {
@@ -874,16 +912,159 @@ class DSDataClass {
         return `${this.constructor.name}{${this.id}`;
     }
 }
-/** Deleted data instance
+/** Deleted data instance type
  *
- * @typedef DeletedDataInstance
+ * @typedef {object} DSDataDeletedRecord
  *
- * @property {number} _created - The timestamp at which the data instance was saved
+ * @property {DSDataRecordID} _created - The timestamp at which the data instance was saved
  * @private
  *
- * @property {number} _deleted - The timestamp at which the data instance was deleted
+ * @property {DSTimestamp} _deleted - The timestamp at which the data instance was deleted
  * @private
  */
+
+
+/** Data record instance container & constructor reference
+ *    `DSDataRecordClass` objects are "keys"
+ *
+ * @typedef {Map.<function, DSDataRecord[]>} DSDataRecordContainer
+ * @dict
+ */
+/** Deleted data record container/reference
+ *    `DSDataRecordClass` objects are "keys"
+ *
+ * @typedef {Map.<function, DSDataDeletedRecord[]>} DSDataDeletedRecordContainer
+ * @dict
+ */
+
+/** Data index by type
+ *   An object literal whose keys are `DSDataRecordClass` names
+ *   The value at each key is the corresponding `DSDataRankIndex` container
+ *
+ * @typedef {object.<string, DSDataRankIndex>} DSDataTypeIndex
+ * @dict
+ */
+/** Data index by rank
+ *   An object literal whose keys are `DSDataActivityRank` values
+ *   The value at each key is the corresponding `DSDataIdIndex` container
+ *
+ * @typedef {object.<DSDataActivityRank, DSDataIdIndex>} DSDataRankIndex
+ * @dict
+ */
+/** Data index by id
+ *   An object literal whose keys are data instance ID's
+ *   The value at each key is the corresponding `DSDataRecord` instance
+ *
+ * typedef {object.<(string)DSDataRecordID, DSDataRecord>} DSDataIdIndex        //  Proposed format extension allowing explicit casting of one type to another
+ * @typedef {object.<DSDataRecordID, DSDataRecord>} DSDataIdIndex
+ * @dict
+ */
+
+/**** Abstract interface representing two resolved hash values
+ *
+ * typedef {object} ResolvedHashPair
+ * @interface ResolvedHashPair
+ *
+ * @property {string} local - Resolved local hash digest
+ * @property {string} remote - Resolved remote hash digest
+ */
+/** Hash comparison type
+ * @since 3/12/2019
+ *
+ * augments ResolvedHashPair
+ * @implements ResolvedHashPair
+ */
+class DSHashComparison {
+    /** Instances must be constructed with the resolved local & remote hash values
+     *
+     * @param {string} local - Resolved local hash digest
+     * @param {string} remote - Resolved remote hash digest
+     */
+    constructor(local, remote) {
+        this.local = local;
+        this.remote = remote;
+    }
+
+    /** Hash comparison 'succeeds' getter method
+     *
+     * @returns {boolean} `true` if hashes are both of type 'string' and exactly equal as determined by `===`, otherwise `false`
+     */
+    get succeeds() {
+        if(typeof this.local !== 'string' || typeof this.remote !== 'string')
+            return false;
+
+        return this.local === this.remote;
+    }
+
+    /** Hash comparison 'hash' getter method
+     *
+     * @returns {string} The `remote` hash digest if `succeeds` returns `true`, otherwise empty string ''
+     */
+    get hash() {
+        return this.succeeds ? this.remote : '';
+    }
+
+    toString() {
+        return `DSHashComparison{${this.succeeds}`;
+    }
+}
+
+/**** Reconcile result summary type
+ *    This type is no longer used (replaced by DSDataTypeIndex) but is being kept for record of the format proposal:
+ * @typedef {object.<DSDataActivityRank, object>.<(string)DSDataRecordID, DSDataRecord>} DSDataReconcileData        // Proposed format extension allowing multi-dimensional type specification of object literals/objects with indeterminate property keys
+ */
+/** Reconcile result summary type
+ * @since 3/12/2019
+ */
+class DSReconcileResult {
+    /** Instances must be constructed with the updated remote hash accounting for any data added/edited/deleted during reconciliation
+     *
+     * @param {string} hash - The remote hash digest as returned by `reconcile.php`
+     * @param {DSDataTypeIndex} serverData - The data object returned by `reconcile.php`
+     */
+    constructor(hash, serverData) {
+        /** Retain the remote hash digest so it does not need to be fetched again in a separate request
+         * @property {string} hash - Hash digest of the server's data file computed after running its reconciliation algorithm
+         */
+        this.hash = hash;
+
+        /** Container object for reconciled/conflicting records
+         * @property {DSDataTypeIndex} resolve - A container object with data instances of the given type, organized by rank
+         */
+        this.resolve = serverData;
+    }
+}
+
+/** Sync result summary type
+ * @since 3/12/2019
+ *
+ * augments ResolvedHashPair
+ * @implements ResolvedHashPair
+ */
+class DSSyncResult extends DSHashComparison {
+    /** Instances must be constructed with the resolved local & remote hash values
+     *
+     * @param {ResolvedHashPair} hashPair - Container object for resolved hash digests
+     * @param {string} hashPair.local - Resolved local hash digest
+     * @param {string} hashPair.remote - Resolved remote hash digest
+     * @param {DSReconcileResult} [resolve={}] - reconciliation result; defaults to an empty object
+     *
+     */
+    constructor({local, remote}, resolve = {}) {
+        super(local, remote);
+        /** Automatically records the timestamp when the instance is constructed
+         *
+         * @property {number} sync - `0` if the local and remote hash digests are not equal, otherwise the timestamp at which this instance was constructed
+         */
+        this.sync = Date.now();
+
+        /** If a discrepancy was resolved, the resolved data instances are contained here
+         *
+         * @property {DSReconcileResult}
+         */
+        this.resolve = resolve;
+    }
+}
 
 
 /** Abstract class implements constructor and overrides built-in `toString()`
@@ -1105,22 +1286,6 @@ class DSErrorSetLastSync extends DSError {
     }
 }
 
-/** Sync result summary type
- *
- * @typedef {object} SyncResult
- * @property {string} [hash] - If sync is successful, the hash of the synchronized data files
- * @property {number} [sync] - If sync is successful, the timestamp at which the sync is recorded
- * @property {ReconcileResult} [resolve] - If a discrepancy was resolved, the resolved data instances
- */
-/** Reconcile result summary type
- *
- * @typedef {object} ReconcileResult - An object containing data returned by the server's reconciliation script
- * @property {string} ReconcileResult.hash - Hash digest of the server's data file computed after running its reconciliation algorithm
- * @property {ReconcileResult.<string, object>} typeContainer - A container object with data instances of the given type, organized by rank
- * @property {typeContainer.<string, object>} rankContainer - A container object with data instances of the given type and rank, indexed by ID
- * @property {rankContainer.<string, DSDataClass>} dataInstance - A data instance of the given type & rank, stored using its ID as a key
- */
-
 /** AES-GCM cipher object
  *
  * @typedef {object} AesGcmCipher
@@ -1128,42 +1293,4 @@ class DSErrorSetLastSync extends DSError {
  * @property {string} salt
  * @property {string} iv
  * @property {string} text
- */
-
-/** Data activity rank
- * 'new', 'modified', 'deleted', or 'conflict'
- *
- * @typedef {string} DataActivityRank
- *
- * @enum {string}
- */
-
-/** Data instance container indexed by type-rank-id
- *
- * @typedef {object} IndexObjectTypeRankId
- *
- * @property {object} [type] - A container object with data instances of the given type, organized by rank
- * @property {object} [type.rank] - Containers for each individual data rank
- * @property {DSDataClass} [rank.id] - A data instance of the given type & rank, stored using its ID as a key
- */
-
-/** Data instance container & constructor reference
- *
- * @typedef {Map} TypeContainer
- *
- * @property {function} constructor - Constructor function/class object for the given type
- * @property {object[]} instances - Array of all instances of a given type
- */
-/** Record of a deleted data instance
- *
- * @typedef {object} DeletedRecord
- *
- * @property {number} _created - ID/_created values of the deleted instance
- * @property {number} _deleted - Timestamp at which the instance was deleted
- */
-/** Deleted instance record container
- *
- * @typedef {object} DeletedContainer
- *
- * @property {DeletedRecord[]} DeletedContainer.records - Array of object containing records of each deleted instance
  */
