@@ -233,19 +233,23 @@ class DataStorage {
         let local = this._hash();
 
         //  `await` both asynchronous requests and pass the resolved values to `_compareHash()`
+        //  Assign both resolved values to local variables
         [local, remote] = await Promise.all([local, remote]);
-        let result = this._compareHash(local, remote);
+        let compare = new DSHashComparison(local, remote);
 
         //  If the initial comparison fails, initiate the reconciliation procedure
         //  **For now just fail the sync**
-        if(!result) {
-            // let reconcile = await this._reconcile();
-            // let result = this._compareHash(local, reconcile);
+        let resolve = undefined;
+        if(!compare.succeeds) {
+            // throw new DSErrorSync(`Failed to synchronize local and remote data files`, {local, remote});
 
-            throw new DSErrorSync(`Failed to synchronize local and remote data files`, {local, remote});
+            let reconcile = await this._reconcile();
+            // let result = this._compareHash(local, reconcile);
         }
 
-        //  At this point, either sync, the reconciliation, or resolution must have succeeded
+        //  At this point, either sync, reconciliation, or resolution must have succeeded
+        let sync = new DSSyncResult(compare, resolve || undefined);
+
         let now = new Date;
         let time = now.getTime();
         this._lastSync = time;
@@ -287,7 +291,9 @@ class DataStorage {
      *
      * @private
      */
-    async _reconcile() {}
+    async _reconcile() {
+
+    }
 
     /** Resolve server's reconciliation response
      *
