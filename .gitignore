@@ -1,5 +1,9 @@
-//  Ignore WebStorm project directory
+//  Ignore PhpStorm project directory
 .idea/*
+
+//  Ignore JSDoc documentation directory, which can be reconstructed at any
+//  time based on JSDoc comments in the source files
+doc/*
 
 //  Ignore Git message files
 message*.*
