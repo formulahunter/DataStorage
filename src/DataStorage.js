@@ -502,9 +502,9 @@ class DataStorage {
 
     /** Dispatch XMLHttpRequests with the POST method to a given URL with specified data and optional headers
      *
-     * @param {string} data - The body of the request to be sent
+     * @param {(object|string)} data - The data object to be serialized and sent as the request body
      * @param {string} url - The URL of the request target file
-     * @param {string[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {object.<header, value>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
      * @returns {PromiseLike<object>} Resolves to the value of the server response
      *
@@ -804,7 +804,7 @@ function toHexString(bytes) {
 
 /** Timestamp type
  *   Integer greater than (not equal to) 0
- * typedef {number<int[!0, >]} DSTimestamp   //  Proposed format extension allowing integer type with range constraint ('!' indicates exclusive bound, i.e. value cannot be equal to 0)
+ * typedef {number<int[!0, >]} DSTimestamp   //  #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing integer type with range constraint ('!' indicates exclusive bound, i.e. value cannot be equal to 0)
  * @typedef {number} DSTimestamp
  */
 /** Data record ID type
@@ -944,8 +944,9 @@ class DSDataRecord {
  */
 
 /** Data index by type
- *   An object literal whose keys are `DSDataRecordClass` names
+ *   `Object` literal whose keys are `DSDataRecord` subclass names (type `string`)
  *   The value at each key is the corresponding `DSDataRankIndex` container
+ *   See note in `DSDataRankIndex` regarding ranks with no relevant data (spoiler: they are defined as empty objects)
  *
  * @typedef {object.<string, DSDataRankIndex>} DSDataTypeIndex
  * @dict
@@ -953,45 +954,91 @@ class DSDataRecord {
 /** Data index by rank
  *   An object literal whose keys are `DSDataActivityRank` values
  *   The value at each key is the corresponding `DSDataIdIndex` container
+ *   A rank index with no relevant data will be defined as an empty object
  *
  * @typedef {object.<DSDataActivityRank, DSDataIdIndex>} DSDataRankIndex
  * @dict
  */
 /** Data index by id
- *   An object literal whose keys are data instance ID's
+ *   An object literal whose keys are data instance ID's (cast to `string` types)
  *   The value at each key is the corresponding `DSDataRecord` instance
  *
- * typedef {object.<(string)DSDataRecordID, DSDataRecord>} DSDataIdIndex        //  Proposed format extension allowing explicit casting of one type to another
+ * typedef {object.<(string)DSDataRecordID, DSDataRecord>} DSDataIdIndex        //  #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing explicit casting of one type to another
  * @typedef {object.<DSDataRecordID, DSDataRecord>} DSDataIdIndex
  * @dict
  */
 
-/**** Abstract interface representing two resolved hash values
+/**** Reconcile result summary type
+ *    This type is no longer used (replaced by DSDataTypeIndex) but is being kept for record of the format proposal:
+ * @typedef {object.<DSDataActivityRank, object>.<(string)DSDataRecordID, DSDataRecord>} DSDataReconcileData        // #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing multi-dimensional type specification of object literals/objects with indeterminate property keys
+ */
+/** Reconcile result summary type
  *
- * typedef {object} ResolvedHashPair
- * @interface ResolvedHashPair
+ * @property {string} hash - Hash digest of the server's data file computed after running its reconciliation algorithm
+ * @property {DSDataTypeIndex} data - Container object for reconciled/conflicting data records
+ *
+ * @since 3/12/2019
+ */
+class DSReconcileResult {
+    /** Instances must be constructed with the updated remote hash accounting for any data added/edited/deleted during reconciliation
+     *
+     * @param {string} hash - The remote hash digest as returned by `reconcile.php`
+     * @param {DSDataTypeIndex} [serverData] - The data object returned by `reconcile.php`
+     */
+    constructor(hash, serverData) {
+        //  Retain the remote hash digest so it does not need to be fetched again in a separate request
+        this.hash = hash;
+
+        //  Format `serverData` to conform to `DSDataTypeIndex` type spec
+        if(!serverData) serverData = {};
+        for(let rank in DSDataActivityRank) {
+            if(!DSDataActivityRank.hasOwnProperty(rank))
+                continue;
+
+            if(!serverData[rank])
+                serverData[rank] = {};
+        }
+        this.data = serverData;
+    }
+}
+
+/** Sync result summary type
+ *   The `DSSyncResult` combines two "interfaces" to summarize all relevant info about a sync operation
+ *   1. The resolved `local` and `remote` hash digests, and interface methods `get succeeds()` and `get hash()`
+ *   2. The `DSReconcileResult` interface, with properties `hash` and `resolve`
  *
  * @property {string} local - Resolved local hash digest
  * @property {string} remote - Resolved remote hash digest
- */
-/** Hash comparison type
+ *
+ * @property {number} sync - The timestamp at which the sync was confirmed successful; initialized to `0`
+ * @readonly
+ *
+ * @property {DSReconcileResult} resolve - The result returned by the server's `reconcile()` algorithm
+ *
  * @since 3/12/2019
  *
- * augments ResolvedHashPair
- * @implements ResolvedHashPair
  */
-class DSHashComparison {
+class DSSyncResult {
     /** Instances must be constructed with the resolved local & remote hash values
      *
      * @param {string} local - Resolved local hash digest
      * @param {string} remote - Resolved remote hash digest
+     * @param {DSReconcileResult} [resolve={}] - reconciliation result; defaults to an empty object
+     *
      */
-    constructor(local, remote) {
+    constructor(local, remote, resolve = new DSReconcileResult('')) {
         this.local = local;
         this.remote = remote;
+
+        // Automatically records the timestamp when the instance is constructed
+        this.sync = 0;
+
+        // If a discrepancy was resolved, the resolved data instances are contained here
+        this.resolve = resolve;
     }
 
     /** Hash comparison 'succeeds' getter method
+     *    This method automatically sets `sync` property if both hashes match and
      *
      * @returns {boolean} `true` if hashes are both of type 'string' and exactly equal as determined by `===`, otherwise `false`
      */
@@ -999,7 +1046,19 @@ class DSHashComparison {
         if(typeof this.local !== 'string' || typeof this.remote !== 'string')
             return false;
 
-        return this.local === this.remote;
+        if(this.local !== this.remote)
+            return false;
+
+        if(!this.sync) {
+            Object.defineProperty(this, 'sync', {
+                configurable: false,
+                enumerable: true,
+                value: Date.now(),
+                writable: false
+            });
+        }
+
+        return true;
     }
 
     /** Hash comparison 'hash' getter method
@@ -1011,64 +1070,18 @@ class DSHashComparison {
     }
 
     toString() {
-        return `DSHashComparison{${this.succeeds}`;
-    }
-}
+        try {
+            let str;
+            if(this.succeeds)
+                str = `success at ${this.sync}`;
+            else
+                str = `fail with local (${this.local ? this.local.slice(-6) : 'undefined'}), remote (${this.remote ? this.remote.slice(-6) : 'undefined'})`;
 
-/**** Reconcile result summary type
- *    This type is no longer used (replaced by DSDataTypeIndex) but is being kept for record of the format proposal:
- * @typedef {object.<DSDataActivityRank, object>.<(string)DSDataRecordID, DSDataRecord>} DSDataReconcileData        // Proposed format extension allowing multi-dimensional type specification of object literals/objects with indeterminate property keys
- */
-/** Reconcile result summary type
- * @since 3/12/2019
- */
-class DSReconcileResult {
-    /** Instances must be constructed with the updated remote hash accounting for any data added/edited/deleted during reconciliation
-     *
-     * @param {string} hash - The remote hash digest as returned by `reconcile.php`
-     * @param {DSDataTypeIndex} serverData - The data object returned by `reconcile.php`
-     */
-    constructor(hash, serverData) {
-        /** Retain the remote hash digest so it does not need to be fetched again in a separate request
-         * @property {string} hash - Hash digest of the server's data file computed after running its reconciliation algorithm
-         */
-        this.hash = hash;
-
-        /** Container object for reconciled/conflicting records
-         * @property {DSDataTypeIndex} resolve - A container object with data instances of the given type, organized by rank
-         */
-        this.resolve = serverData;
-    }
-}
-
-/** Sync result summary type
- * @since 3/12/2019
- *
- * augments ResolvedHashPair
- * @implements ResolvedHashPair
- */
-class DSSyncResult extends DSHashComparison {
-    /** Instances must be constructed with the resolved local & remote hash values
-     *
-     * @param {ResolvedHashPair} hashPair - Container object for resolved hash digests
-     * @param {string} hashPair.local - Resolved local hash digest
-     * @param {string} hashPair.remote - Resolved remote hash digest
-     * @param {DSReconcileResult} [resolve={}] - reconciliation result; defaults to an empty object
-     *
-     */
-    constructor({local, remote}, resolve = {}) {
-        super(local, remote);
-        /** Automatically records the timestamp when the instance is constructed
-         *
-         * @property {number} sync - `0` if the local and remote hash digests are not equal, otherwise the timestamp at which this instance was constructed
-         */
-        this.sync = Date.now();
-
-        /** If a discrepancy was resolved, the resolved data instances are contained here
-         *
-         * @property {DSReconcileResult}
-         */
-        this.resolve = resolve;
+            return `DSSyncResult{${str}}`;
+        }
+        catch(er) {
+            console.log('something went wrong');
+        }
     }
 }
 
@@ -1091,7 +1104,7 @@ class DSError extends Error {
     }
 
     toString() {
-        return `${this.constructor.name}${this.message?`: ${this.message}`:''}${this.source?`\n${this.source}`:''}`;
+        return `${this.constructor.name}${this.message?`: ${this.message}`:''}${this.source?`\n${this.source.toString()}`:''}`;
     }
 }
 
