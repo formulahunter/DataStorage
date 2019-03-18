@@ -130,14 +130,37 @@ class DataStorage {
      *  init()
      */
 
-    /** Sync data automatically and return parsed JSON data objects
-     *    TEMPORARY IMPLEMENTATION FOR DEVELOPMENT/DEMONSTRATION PURPOSES
+    /** Load local data into memory and return result of data sync
      *
-     * @returns {object}
+     * @returns {DSSyncResult}
      */
     async init() {
-        let sync = await this._sync();
+        //  Synchronously read and parse local data
+        let jdat = DataStorage.parse(await DataStorage.read(`${this.key}-data`));
 
+        //  Iterate over the type container arrays in `jdat`
+        for(let type in jdat) {
+            if(!jdat.hasOwnProperty(type))
+                continue;
+
+            //  Designate the associated class object for each type
+            let classObj = window[type];
+
+            //  Iterate through elements in each type container array
+            for(let jobj of jdat[type]) {
+                //  Construct a new instance of `classObj` and assign its `_created` property
+                let inst = classObj.fromJSON(jobj);
+
+                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
+                this._types.get(classObj).push(jobj);
+
+                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
+                if(jobj._created > this._maxID)
+                    this._maxID = jobj._created;
+            }
+        }
+
+        return this._sync();
     }
 
 
@@ -182,8 +205,8 @@ class DataStorage {
      *    On success, return a Promise resolving to an object summarizing the sync
      *    On failure throws an exception
      *
-     * @param {string} [local]
-     * @param {string} [remote]
+     * @param {(string|PromiseLike<string>)} [local]
+     * @param {(string|PromiseLike<string>)} [remote]
      *
      * @returns {Promise<DSSyncResult>}
      *
@@ -199,100 +222,189 @@ class DataStorage {
          *
          */
 
-        //  Initiate asynchronous server hash request in `remote`
-        let remote = DataStorage.xhrGet('hash.php');
-
-        //  Synchronously read and parse local data
-        let jdat = DataStorage.parse(await DataStorage.read(this.key));
-
-        //  Iterate over the type container arrays in `jdat`
-        let classObj, inst;
-        for(let type in jdat) {
-            if(!jdat.hasOwnProperty(type))
-                continue;
-
-            //  Designate the associated class object for each type
-            classObj = window[type];
-
-            //  Iterate through elements in each type container array
-            for(let jobj of jdat[type]) {
-                //  Construct a new instance of `classObj` and assign its `_created` property
-                inst = new classObj();
-                inst._created = jobj._created;
-
-                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
-                this._types.get(classObj).push(jobj);
-
-                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
-                if(jobj._created > this._maxID)
-                    this._maxID = jobj._created;
-            }
+        //  Fetch remote server hash asynchronously (if necessary)
+        if(!remote) {
+            let data = {query: 'hash'};
+            let url = 'query.php';
+            let headers = [{
+                header: 'content-type',
+                value: 'application/json;charset=UTF-8'
+            }];
+            remote = DataStorage.xhrPost(data, url, headers);
         }
 
         //  Initiate asynchronous hash digest of local data
-        let local = this._hash();
+        if(!local)
+            local = this._hash();
 
-        //  `await` both asynchronous requests and pass the resolved values to `_compareHash()`
+        //  `await` both asynchronous requests and construct a `DSSyncResult` with the resolved values
         //  Assign both resolved values to local variables
         [local, remote] = await Promise.all([local, remote]);
-        let compare = new DSHashComparison(local, remote);
+        let result = new DSSyncResult(local, remote);
 
         //  If the initial comparison fails, initiate the reconciliation procedure
         //  **For now just fail the sync**
-        let resolve = undefined;
-        if(!compare.succeeds) {
+        if(!result.succeeds) {
             // throw new DSErrorSync(`Failed to synchronize local and remote data files`, {local, remote});
+            console.log('Attempting to reconcile local and remote data');
 
-            let reconcile = await this._reconcile();
-            // let result = this._compareHash(local, reconcile);
+            //  Run the `_reconcile()` procedure
+            //  `result.resolve` is implicitly defined
+            await this._reconcile(result);
+
+            //  Check if discrepancies have been reconciled
+            if(!result.succeeds) {
+                throw new DSErrorSync('Failed to synchronize local and remote data', result.toString());
+            }
         }
 
         //  At this point, either sync, reconciliation, or resolution must have succeeded
-        let sync = new DSSyncResult(compare, resolve || undefined);
-
-        let now = new Date;
-        let time = now.getTime();
+        //  If `result.succeeds` was used to evaluate success, `result.sync` was set automatically (see implementation of `DSSyncResult[get succeeds()]`)
+        let time = result.sync;
         this._lastSync = time;
         console.info('Local and remote data synchronized');
-        console.debug(`Successful sync on ${now.toLocaleString()}\nTimestamp: ${time}`);
+        console.debug(`Successful sync on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
 
-        //  Define the `sync` property on `result` and resolve the `sync()`
-        result.sync = time;
-        return {hash: remote, sync: time};
-    }
-
-    /** Compare two hash values for equality
-     *
-     * @param {string} local - Local hash digest
-     * @param {string} remote - remote hash digest
-     *
-     * @returns {DSHashComparison} - An object summarizing the result of the sync operation
-     *
-     * @private
-     */
-    _compareHash(local, remote) {
-        console.log(local, remote);
-
-        if(local === remote)
-            return {hash: remote, sync: Date.now()};
-
-        return {};
+        //  Disable any changes to `result` and return it
+        Object.freeze(result);
+        return result;
     }
 
     /** Reconcile discrepancies
      *    Aggregate all data activity since last sync
      *    Send to server's reconciliation script
-     *    Process result by updating local data file
+     *    Process result by updating local data cache
      *    Pass any conflicts along to `_reconcile()`
      *
-     * @param {object} result
+     * @param {DSSyncResult} sync - The sync result originally constructed in `_sync()`, passed so that its `remote` property can be updated with the new server hash
      *
-     * @returns {Promise<DSSyncResult>}
+     * @returns {Promise<DSReconcileResult>}
      *
      * @private
      */
-    async _reconcile() {
+    async _reconcile(sync) {
+        //  Compile local activity since `lastSync`
+        let lastSync = this._lastSync;
+        let instances = {};
+        for(let type of this._types.keys()) {
+            //  Associate data instances with the key they are defined on
+            //  Organization of data in the remote repository depends on this association
+            //  Object literals are used as associative arrays to simplify some server-side `reconcile()` operations
+            //    - Refer to `DSDataTypeIndex` type definition
+            let key = type.name;
+            instances[key] = {
+                new: {},
+                modified: {},
+                deleted: {}
+            };
 
+            let active = this._types.get(type);
+            let deleted = this._deleted.get(type);
+            for(let inst of active) {
+                if(inst._created > lastSync)
+                    instances[key].new[inst.id] = inst;
+                else if(inst._modified && inst._modified > lastSync)
+                    instances[key].modified[inst.id] = inst;
+            }
+            for(let inst of deleted) {
+                if(inst._deleted > lastSync)
+                    instances[key].deleted[inst._created] = inst;
+            }
+
+            //  Clean up `instances` to minimize unnecessary data transmission
+            //  Also prevents server from having to iterate over empty data sets
+            //  This violates the `DSDataTypeIndex` type definition
+            let newCount = Object.keys(instances[key].new).length;
+            let modCount = Object.keys(instances[key].modified).length;
+            let delCount = Object.keys(instances[key].deleted).length;
+            if(newCount === 0 && modCount === 0 && delCount === 0) {
+                delete instances[key];
+            }
+            else {
+                if(newCount === 0)
+                    delete instances[key].new;
+                if(modCount === 0)
+                    delete instances[key].modified;
+                if(delCount === 0)
+                    delete instances[key].deleted;
+            }
+        }
+
+        //  Send compiled data to server's `reconcile` procedure
+        let data = {
+            query: 'reconcile',
+            data: {
+                    sync: lastSync,
+                    instances: instances
+            }
+        };
+        let url = 'query.php';
+        let headers = [{
+            header: 'content-type',
+            value: 'application/json;charset=UTF-8'
+        }];
+        let response = await DataStorage.xhrPost(data, url, headers);
+
+        //  Wrap response in `DSReconcileResult` and evaluate
+        let result = new DSReconcileResult(response.hash, response.data);
+        for(let type in result.data) {
+            if(!result.data.hasOwnProperty(type))
+                continue;
+
+            //  Designate the associated class object, data container, and local container for each type
+            //  `dataContainer` is the `DataStorage` instance's container for the designated data type
+            //  `localContainer` is the JSON data container object defined in the server's response
+            let classObj = window[type];
+            let dataContainer = this._types.get(classObj);
+            let localContainer = result.data[type];
+
+            //  Add new data instances, replace modified ones, and remove deleted ones
+            for(let id in localContainer.new) {
+                if(!localContainer.new.hasOwnProperty(id))
+                    continue;
+
+                //  Define a new instance of `classObj` using property values on `jobj`
+                let inst = classObj.fromJSON(localContainer.new[id]);
+
+                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
+                dataContainer.push(inst);
+
+                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
+                if(inst.id > this._maxID)
+                    this._maxID = inst.id;
+            }
+            for(let id in localContainer.modified) {
+                if(!localContainer.modified.hasOwnProperty(id))
+                    continue;
+
+                //  Define a new instance of `classObj` using property values on `jobj`
+                let inst = classObj.fromJSON(localContainer.new[id]);
+
+                //  Find the corresponding record in local memory by its `id` property
+                let ind = dataContainer.findIndex(el => el._created === inst.id);
+                if(ind < 0)
+                    throw new DSErrorReconcile('Failed to reconcile local and remote data: data instance returned by server as "modified" not found in memory', inst);
+
+                dataContainer.splice(ind, 1, inst);
+            }
+            for(let id in localContainer.deleted) {
+                if(!localContainer.deleted.hasOwnProperty(id))
+                    continue;
+
+                throw new DSErrorReconcile('Processing of deleted instances from server reconciliation not yet implemented in DataStorage.resolve()', id);
+            }
+            for(let id in localContainer.conflict) {
+                if(!localContainer.conflict.hasOwnProperty(id))
+                    continue;
+
+                throw new DSErrorReconcile('Processing of conflicting instances from server reconciliation not yet implemented in DataStorage.resolve()', id);
+            }
+        }
+
+        //  Send conflicts to `_resolve()`
+
+        //  Return `result`
+        return result;
     }
 
     /** Resolve server's reconciliation response
@@ -1112,6 +1224,19 @@ class DSError extends Error {
  *
  */
 class DSErrorSync extends DSError {
+    /** Constructor passes arguments to the `DSError` constructor
+     * @param {string} message - message describing this error
+     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when `reconcile()` fails
+ *
+ */
+class DSErrorReconcile extends DSError {
     /** Constructor passes arguments to the `DSError` constructor
      * @param {string} message - message describing this error
      * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
