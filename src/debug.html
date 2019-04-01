@@ -34,7 +34,7 @@
         window['RedClass'] = RedClass;
         window['BlueClass'] = BlueClass;
 
-        async function main() {
+        function main() {
             //  Define an instance of `DataStorage`
             window.data = new DataStorage('demo', [OneClass, TwoClass, RedClass, BlueClass]);
 
@@ -42,7 +42,7 @@
             // generateData();
 
             //  Initialize local data
-            let syncResult = data.init();
+            data.init();
         }
 
         function generateData() {

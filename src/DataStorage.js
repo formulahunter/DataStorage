@@ -160,7 +160,15 @@ class DataStorage {
             }
         }
 
-        return this._sync();
+        //  `await` must be used with this call within an immediate `try..catch()` block to properly capture/log `DSError` instances
+        //  Not sure why
+        try {
+            return await this._sync();
+        }
+        catch(er) {
+            console.error(er.toString());
+            return er;
+        }
     }
 
 
@@ -253,9 +261,8 @@ class DataStorage {
             await this._reconcile(result);
 
             //  Check if discrepancies have been reconciled
-            if(!result.succeeds) {
+            if(!result.succeeds)
                 throw new DSErrorSync('Failed to synchronize local and remote data', result.toString());
-            }
         }
 
         //  At this point, either sync, reconciliation, or resolution must have succeeded
@@ -1201,22 +1208,29 @@ class DSSyncResult {
 /** Abstract class implements constructor and overrides built-in `toString()`
  *    DSError instances can be constructed but will be less useful than a context-specific subclass
  *
+ * @extends Error
+ *
  * @param {string} message - message describing this error
  * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+ * @param {string} [stack] - The execution stack snapshot at the time the error was constructed -- relies on correct inheritance/extension of `Error`
  *
  * @abstract
  */
 class DSError extends Error {
     constructor(message, source) {
         super(message);
-
         this.source = source;
+    }
 
-        console.trace();
+    get name() {
+        return this.constructor.name;
     }
 
     toString() {
-        return `${this.constructor.name}${this.message?`: ${this.message}`:''}${this.source?`\n${this.source.toString()}`:''}`;
+        return `${this.name}: ${this.message}\n${this.source}`;
+    }
+    valueOf() {
+        return this.toString();
     }
 }
 
