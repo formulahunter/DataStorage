@@ -166,7 +166,7 @@ class DataStorage {
             return await this._sync();
         }
         catch(er) {
-            console.error(er.toString());
+            console.error(er);
             return er;
         }
     }
@@ -1218,7 +1218,8 @@ class DSSyncResult {
  */
 class DSError extends Error {
     constructor(message, source) {
-        super(message);
+        super();
+        this.message = `\n${this.name}: ${message ? message : '-'}${source? `\n${source.toString()}` : ''}`;
         this.source = source;
     }
 
@@ -1227,7 +1228,8 @@ class DSError extends Error {
     }
 
     toString() {
-        return `${this.name}: ${this.message}\n${this.source}`;
+        // return `${this.name}: ${this.message?`: ${this.message}`:''}${this.source?`\n${this.source.toString()}`:''}`;
+        return this.message;
     }
     valueOf() {
         return this.toString();
