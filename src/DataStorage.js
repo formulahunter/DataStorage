@@ -251,9 +251,7 @@ class DataStorage {
         let result = new DSSyncResult(local, remote);
 
         //  If the initial comparison fails, initiate the reconciliation procedure
-        //  **For now just fail the sync**
         if(!result.succeeds) {
-            // throw new DSErrorSync(`Failed to synchronize local and remote data files`, {local, remote});
             console.log('Attempting to reconcile local and remote data');
 
             //  Run the `_reconcile()` procedure
@@ -350,7 +348,7 @@ class DataStorage {
             header: 'content-type',
             value: 'application/json;charset=UTF-8'
         }];
-        let response = await DataStorage.xhrPost(data, url, headers);
+        let response = DataStorage.parse(await DataStorage.xhrPost(data, url, headers));
 
         //  Wrap response in `DSReconcileResult` and evaluate
         let result = new DSReconcileResult(response.hash, response.data);
@@ -365,6 +363,7 @@ class DataStorage {
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
+            //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
             //  Add new data instances, replace modified ones, and remove deleted ones
             for(let id in localContainer.new) {
                 if(!localContainer.new.hasOwnProperty(id))
@@ -373,7 +372,8 @@ class DataStorage {
                 //  Define a new instance of `classObj` using property values on `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
+                //  `push` the new instance to the respective container array in `data._types`
+                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
                 dataContainer.push(inst);
 
                 //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
@@ -392,23 +392,29 @@ class DataStorage {
                 if(ind < 0)
                     throw new DSErrorReconcile('Failed to reconcile local and remote data: data instance returned by server as "modified" not found in memory', inst);
 
+                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
                 dataContainer.splice(ind, 1, inst);
             }
             for(let id in localContainer.deleted) {
                 if(!localContainer.deleted.hasOwnProperty(id))
                     continue;
 
-                throw new DSErrorReconcile('Processing of deleted instances from server reconciliation not yet implemented in DataStorage.resolve()', id);
+                throw new DSErrorReconcile('Processing of deleted instances from server reconciliation not yet implemented in DataStorage.resolve()', `Instance id: ${id}`);
             }
             for(let id in localContainer.conflict) {
                 if(!localContainer.conflict.hasOwnProperty(id))
                     continue;
 
-                throw new DSErrorReconcile('Processing of conflicting instances from server reconciliation not yet implemented in DataStorage.resolve()', id);
+                throw new DSErrorReconcile('Processing of conflicting instances from server reconciliation not yet implemented in DataStorage.resolve()', `Instance id: ${id}`);
             }
         }
 
         //  Send conflicts to `_resolve()`
+
+        //  Implicit update of sync result
+        sync.resolve = result;
+        sync.remote = result.hash;
+        sync.local = await this._hash();
 
         //  Return `result`
         return result;
@@ -1065,9 +1071,11 @@ class DSDataRecord {
 /** Data index by type
  *   `Object` literal whose keys are `DSDataRecord` subclass names (type `string`)
  *   The value at each key is the corresponding `DSDataRankIndex` container
- *   See note in `DSDataRankIndex` regarding ranks with no relevant data (spoiler: they are defined as empty objects)
+ *   Types with no relevant data are not represented (their index is `undefined`)
+ *     There is no global reference to the complete collection of data types/classes
+ *     Contrast with `DSDataActivityRank`, whose members are globally defined constants and so can be iterated over
  *
- * @typedef {object.<string, DSDataRankIndex>} DSDataTypeIndex
+ * @typedef {object.<string, (DSDataRankIndex|undefined)>} DSDataTypeIndex
  * @dict
  */
 /** Data index by rank
@@ -1104,19 +1112,11 @@ class DSReconcileResult {
      * @param {string} hash - The remote hash digest as returned by `reconcile.php`
      * @param {DSDataTypeIndex} [serverData] - The data object returned by `reconcile.php`
      */
-    constructor(hash, serverData) {
+    constructor(hash, serverData = {}) {
         //  Retain the remote hash digest so it does not need to be fetched again in a separate request
         this.hash = hash;
 
-        //  Format `serverData` to conform to `DSDataTypeIndex` type spec
-        if(!serverData) serverData = {};
-        for(let rank in DSDataActivityRank) {
-            if(!DSDataActivityRank.hasOwnProperty(rank))
-                continue;
-
-            if(!serverData[rank])
-                serverData[rank] = {};
-        }
+        //  Retain server data or an empty object
         this.data = serverData;
     }
 }
@@ -1218,7 +1218,7 @@ class DSSyncResult {
  */
 class DSError extends Error {
     constructor(message, source) {
-        super();
+        super(message);
         this.message = `\n${this.name}: ${message ? message : '-'}${source? `\n${source.toString()}` : ''}`;
         this.source = source;
     }

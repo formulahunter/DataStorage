@@ -270,12 +270,16 @@ function reconcile($data) {
 
     //  Write all changes to disk
 
+    //  Define container `data` object
+    $result = new stdClass();
+    $result->data = $compiled;
+
     //  MAKE SURE $file REFLECTS ALL CHANGES BEFORE COMPUTING HASH IN FOLLOWING COMMAND
     //   Compute new server hash and add to `$compiled`
-    $compiled->hash = getHash();
+    $result->hash = getHash();
 
     //   Return selected activity and new hash
-    return json_encode($compiled, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    return json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }
 
 function saveNew($type, $inst, $ind) {
