@@ -5,6 +5,9 @@
 //  time based on JSDoc comments in the source files
 doc/*
 
+//  Ignore log files
+log/*
+
 //  Ignore Git message files
 message*.*
 commit-message.md
