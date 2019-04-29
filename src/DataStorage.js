@@ -255,7 +255,7 @@ class DataStorage {
             console.log('Attempting to reconcile local and remote data');
 
             //  Run the `_reconcile()` procedure
-            //  `result.resolve` is implicitly defined
+            //  `result.reconcile` is implicitly defined
             await this._reconcile(result);
 
             //  Check if discrepancies have been reconciled
@@ -419,7 +419,7 @@ class DataStorage {
         }
 
         //  Implicit update of sync result
-        sync.resolve = result;
+        sync.reconcile = result;
         sync.remote = result.hash;
         sync.local = await this._hash();
 
@@ -1135,7 +1135,7 @@ class DSReconcileResult {
 /** Sync result summary type
  *   The `DSSyncResult` combines two "interfaces" to summarize all relevant info about a sync operation
  *   1. The resolved `local` and `remote` hash digests, and interface methods `get succeeds()` and `get hash()`
- *   2. The `DSReconcileResult` interface, with properties `hash` and `resolve`
+ *   2. The `DSReconcileResult` interface, with properties `hash` and `reconcile`
  *
  * @property {string} local - Resolved local hash digest
  * @property {string} remote - Resolved remote hash digest
@@ -1143,7 +1143,7 @@ class DSReconcileResult {
  * @property {number} sync - The timestamp at which the sync was confirmed successful; initialized to `0`
  * @readonly
  *
- * @property {DSReconcileResult} resolve - The result returned by the server's `reconcile()` algorithm
+ * @property {DSReconcileResult|undefined} [reconcile] - The result returned by the server's `reconcile()` algorithm, if data has been reconciled (successful or otherwise)
  *
  * @since 3/12/2019
  *
@@ -1153,22 +1153,22 @@ class DSSyncResult {
      *
      * @param {string} local - Resolved local hash digest
      * @param {string} remote - Resolved remote hash digest
-     * @param {DSReconcileResult} [resolve={}] - reconciliation result; defaults to an empty object
+     * @param {DSReconcileResult} [reconcile] - reconciliation result; defaults to an empty object
      *
      */
-    constructor(local, remote, resolve = new DSReconcileResult('')) {
+    constructor(local, remote, reconcile = new DSReconcileResult('')) {
         this.local = local;
         this.remote = remote;
 
-        // Automatically records the timestamp when the instance is constructed
+        // Default value indicating sync not yet confirmed
         this.sync = 0;
 
         // If a discrepancy was resolved, the resolved data instances are contained here
-        this.resolve = resolve;
+        this.reconcile = reconcile;
     }
 
     /** Hash comparison 'succeeds' getter method
-     *    This method automatically sets `sync` property if both hashes match and
+     *    This method automatically defines read-only `sync` property if both hashes match and
      *
      * @returns {boolean} `true` if hashes are both of type 'string' and exactly equal as determined by `===`, otherwise `false`
      */
