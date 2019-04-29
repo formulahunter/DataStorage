@@ -151,12 +151,8 @@ class DataStorage {
                 //  Construct a new instance of `classObj` and assign its `_created` property
                 let inst = classObj.fromJSON(jobj);
 
-                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
-                this._types.get(classObj).push(jobj);
-
-                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
-                if(jobj._created > this._maxID)
-                    this._maxID = jobj._created;
+                //  Add the new instance to the respective container array
+                this._add(jobj);
             }
         }
 
@@ -367,7 +363,6 @@ class DataStorage {
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
-            //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
             //  Add new data instances, replace modified ones, and remove deleted ones
             for(let id in localContainer.new) {
                 if(!localContainer.new.hasOwnProperty(id))
@@ -376,13 +371,8 @@ class DataStorage {
                 //  Define a new instance of `classObj` using property values on `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  `push` the new instance to the respective container array in `data._types`
-                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
-                dataContainer.push(inst);
-
-                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
-                if(inst.id > this._maxID)
-                    this._maxID = inst.id;
+                //  Add the new instance to its respective container array
+                this._add(inst);
             }
             for(let id in localContainer.modified) {
                 if(!localContainer.modified.hasOwnProperty(id))
@@ -391,13 +381,8 @@ class DataStorage {
                 //  Define a new instance of `classObj` using property values on `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  Find the corresponding record in local memory by its `id` property
-                let ind = dataContainer.findIndex(el => el._created === inst.id);
-                if(ind < 0)
-                    throw new DSErrorReconcile('Failed to reconcile local and remote data: data instance returned by server as "modified" not found in memory', inst);
-
-                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
-                dataContainer.splice(ind, 1, inst);
+                //  Replace the corresponding instance in the associated type container
+                this._replace(inst);
             }
             for(let id in localContainer.deleted) {
                 if(!localContainer.deleted.hasOwnProperty(id))
@@ -441,6 +426,103 @@ class DataStorage {
      */
     _resolve(response) {}
 
+
+    /** Add data instance to respective container
+     *      Maintain proper sort order and `_maxID`
+     *
+     *  @param {DSDataRecord} inst
+     *
+     *  @return {number} the index to which the new instance was sorted
+     *
+     *  @private
+     */
+    _add(inst) {
+        //  Get the associated container array and check that there are no ID conflicts
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        let existing = container.find(el => el.id === inst.id);
+        if(existing)
+            throw new DSErrorAdd(`Cannot add new ${type.name}: ID ${inst.id} already exists in local data container`, [inst, existing]);
+
+        //  `push` the new instance to the container
+        container.push(inst);
+
+        //  Re-sort the array using the standard sort algorithm
+        container.sort(stdSort);
+
+        //  Compare the instance's ID to `_maxID` and assign the new value if greater than the current one
+        if(inst.id > this._maxID)
+            this._maxID = inst.id;
+
+        //  Return index of new instance (after sorting)
+        return container.indexOf(inst);
+    }
+
+    /** Replace an existing data instance with a new one
+     *
+     * @param {DSDataRecord} inst
+     *
+     * @return {number} the index to which the new instance was sorted
+     *
+     * @private
+     */
+    _replace(inst) {
+        //  Get the associated container array and index of old instance
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        let ind = container.findIndex(el => el.id === inst.id);
+        if(ind < 0)
+            throw new DSErrorReplace(`Cannot replace ${inst} -- no matching instance found in the ${type.name} container`);
+
+        //  Replace the old instance with the new one
+        container.splice(ind, 1, inst);
+
+        //  Re-sort the array using the standard sort algorithm
+        container.sort(stdSort);
+
+        //  Return index to which the new instance was sorted
+        return container.indexOf(inst);
+    }
+
+    /** Remove an existing data instance
+     *      Adds identifying information to the respective `_deleted` container by default
+     *      Can be overridden by passing `false` as the second argument
+     *
+     * @param {DSDataRecord} inst
+     * @param {boolean} [del=true]
+     *
+     * @return {number} the index from which the instance was removed
+     *
+     * @private
+     */
+    _remove(inst, del = true) {
+        //  Get the associated container array and index of instance
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        let ind = container.indexOf(inst);
+        if(ind < 0)
+            throw new DSErrorReplace(`Cannot remove ${inst} -- not found in the ${type.name} container`);
+
+        //  Remove the instance from the container array
+        container.splice(ind, 1);
+
+        //  Add identifying data to the appropriate deleted container
+        if(del) {
+            //  Get the associated 'deleted' container array and check for ID conflicts
+            let container = this._deleted.get(type);
+            let existing = container.find(el => el.id === inst.id);
+            if(existing)
+                throw new DSErrorAdd(`Cannot add ${type.name} ${inst.id} to deleted container: ID already exists in local 'deleted' data container`, [inst, existing]);
+
+            //  `push` identifying information to the 'deleted' container
+            container.push({_created: inst._created, _deleted: inst._deleted});
+
+            //  Re-sort the array using the standard sort algorithm
+            container.sort(stdSort);
+        }
+
+        return ind;
+    }
 
     /** ##SECTION - Compute cryptographic hash digests
      *
@@ -897,6 +979,16 @@ class DataStorage {
     }
 }
 
+/** Standard data sorting algorithm
+ *      For use with `Array.prototype.sort()`
+ *
+ * @param {DSDataRecord} a
+ * @param {DSDataRecord} b
+ *
+ * @return {number} - will be less than 0 if `a` was created more recently than `b`, otherwise greater than 0
+ */
+const stdSort = (a, b) => b.id - a.id;
+
 /** Convert a string of hexadecimal characters to a `Uint8Array`
  *   Adapted from [StackOverflow answer][hex string conversion]
  *
@@ -1318,6 +1410,43 @@ class DSErrorConvertFromHexString extends DSError {
  *
  */
 class DSErrorConvertToHexString extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+/** Error thrown when `_add()` fails
+ *
+ */
+class DSErrorAdd extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `_replace()` fails
+ *
+ */
+class DSErrorReplace extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `_remove()` fails
+ *
+ */
+class DSErrorRemove extends DSError {
     /**
      * @param {string} message - message describing this error
      * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated

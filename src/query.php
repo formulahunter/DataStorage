@@ -42,6 +42,38 @@ function count_nl($subject) {
     return substr_count($subject, LN);
 }
 
+function stdSort($a, $b) {
+    return $b->_created - $a->_created;
+}
+function add(&$container, $inst) {
+    //  Insert the new instance to the end of the array
+    $container[] = $inst;
+
+    //  Re-sort the array using the standard sort algorithm
+    usort($container, "stdSort");
+}
+function replace(&$container, $oldInst, $newInst) {
+    //  Retrieve the index of the old instance in the provided container array
+    $ind = array_search($oldInst, $container, true);
+    if(!$ind)
+        die('CANNOT_REPLACE_OLD_INST_NOT_FOUND');
+
+    //  Remove the old instance and insert the new one in its place
+    array_splice($container, $ind, 1, $newInst);
+
+    //  Re-sort the array using the standard sort algorithm
+    usort($container, "stdSort");
+}
+function remove($inst, &$container) {
+    //  Retrieve the index of the instance in the provided container array
+    $ind = array_search($inst, $container, true);
+    if(!$ind)
+        die('CANNOT_REMOVE_INST_NOT_FOUND');
+
+    //  Remove the instance
+    array_splice($container, $ind, 1);
+}
+
 
 function getHash() {
     global $file;
@@ -287,7 +319,7 @@ function reconcile($data) {
                     }
                     else {
                         LOG && $output .= "no conflicts for `new` client id $id" . LN;
-                        array_unshift($file->$type, $clientInst);
+                        add($file->$type, $clientInst);
                     }
                 }
                 LOG && $output .= LN;
@@ -342,8 +374,8 @@ function reconcile($data) {
                         if(!isset($matches[0]->_modified) || ($matches[0]->_modified < $lastSync && $clientInst->_modified > $matches[0]->_modified)) {
                             LOG && $output .= IN . "clean replacement of client-modified record $id" . LN;
 
-                            $ind = array_search($matches[0], $file->$type);
-                            array_splice($file->$type, $ind, 1, $matches);
+                            //  Replace the instance and maintain correct sort order
+                            replace($file->$type, $matches[0], $clientInst);
                         }
                         else {
                             LOG && $output .= IN . "aborting incongruent replacement of modified record $id" . LN;
@@ -369,9 +401,11 @@ function reconcile($data) {
                         $compiled->$type->conflicts->$id = $matches;
                     }
                     else {
-                        $ind = array_search($file->$type, $clientInst);
-                        array_splice($file->$type, $ind, 1);
-                        array_unshift($file->deleted->$type, $clientInst);
+                        //  Remove the instance from its container array
+                        remove($file->$type, $clientInst);
+
+                        //  Add the instance to its respective "deleted" container
+                        add($file->deleted->$type, $clientInst);
                     }
                 }
             }
@@ -421,39 +455,14 @@ function reconcile($data) {
     return json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }
 
-function saveNew($type, $inst, $ind) {
+function saveNew($inst, $type) {
     global $file;
 
-    $typeArray = false;
-    switch($type) {
-        case 'ingredient':
-        case 'ingredients':
-            $typeArray = &$file->ingredients;
-            break;
-        case 'recipe':
-        case 'recipes':
-            $typeArray = &$file->recipes;
-            break;
-        case 'meal':
-        case 'meals':
-            $typeArray = &$file->meals;
-            break;
-        case 'list':
-        case 'lists':
-            $typeArray = &$file->lists;
-            break;
-        /*case 'receipt':
-        /*case 'receipts':
-            $typeArray = &$file->receipts;
-            break;*/
-        default:
-            die("Unknown data type \'$type\'");
-    }
+    if(!isset($file->$type))
+        die('CANNOT_ADD_INVALID_TYPE');
 
-    //  Add new instance at given index
-    //  New array members to be added must be provided in a container array
-    //  Otherwise their properties are enumerated and added as key-value pairs
-    array_splice($typeArray, $ind, 0, array($inst));
+    //  Add new instance to the respective array
+    add($file->$type, $inst);
 
     //  Encode data object back to JSON string to write to file
     $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
@@ -469,7 +478,7 @@ function modify() {
 
 }
 
-function remove() {
+function delete() {
 
 }
 
@@ -498,7 +507,7 @@ switch($query) {
         LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
         return;
     case "add":
-        echo saveNew($request->type, $request->instance, $request->index);
+        echo saveNew($request->instance, $request->type);
         return;
 //    case "edit":
 //        echo modify($request->data);
