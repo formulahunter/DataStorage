@@ -319,7 +319,7 @@ function reconcile($data) {
                     }
                     else {
                         LOG && $output .= "no conflicts for `new` client id $id" . LN;
-                        array_unshift($file->$type, $clientInst);
+                        add($file->$type, $clientInst);
                     }
                 }
                 LOG && $output .= LN;
@@ -374,8 +374,8 @@ function reconcile($data) {
                         if(!isset($matches[0]->_modified) || ($matches[0]->_modified < $lastSync && $clientInst->_modified > $matches[0]->_modified)) {
                             LOG && $output .= IN . "clean replacement of client-modified record $id" . LN;
 
-                            $ind = array_search($matches[0], $file->$type);
-                            array_splice($file->$type, $ind, 1, $matches);
+                            //  Replace the instance and maintain correct sort order
+                            replace($file->$type, $matches[0], $clientInst);
                         }
                         else {
                             LOG && $output .= IN . "aborting incongruent replacement of modified record $id" . LN;
@@ -401,9 +401,11 @@ function reconcile($data) {
                         $compiled->$type->conflicts->$id = $matches;
                     }
                     else {
-                        $ind = array_search($file->$type, $clientInst);
-                        array_splice($file->$type, $ind, 1);
-                        array_unshift($file->deleted->$type, $clientInst);
+                        //  Remove the instance from its container array
+                        remove($file->$type, $clientInst);
+
+                        //  Add the instance to its respective "deleted" container
+                        add($file->deleted->$type, $clientInst);
                     }
                 }
             }
@@ -482,10 +484,8 @@ function saveNew($type, $inst, $ind) {
             die("Unknown data type \'$type\'");
     }
 
-    //  Add new instance at given index
-    //  New array members to be added must be provided in a container array
-    //  Otherwise their properties are enumerated and added as key-value pairs
-    array_splice($typeArray, $ind, 0, array($inst));
+    //  Add new instance to the respective array
+    add($file->$type, $inst);
 
     //  Encode data object back to JSON string to write to file
     $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);

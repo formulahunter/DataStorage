@@ -151,12 +151,8 @@ class DataStorage {
                 //  Construct a new instance of `classObj` and assign its `_created` property
                 let inst = classObj.fromJSON(jobj);
 
-                //  `push` the new instance to the respective container array in `data._types` using the class object as an index/lookup
-                this._types.get(classObj).push(jobj);
-
-                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
-                if(jobj._created > this._maxID)
-                    this._maxID = jobj._created;
+                //  Add the new instance to the respective container array
+                this._add(jobj);
             }
         }
 
@@ -367,7 +363,6 @@ class DataStorage {
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
-            //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
             //  Add new data instances, replace modified ones, and remove deleted ones
             for(let id in localContainer.new) {
                 if(!localContainer.new.hasOwnProperty(id))
@@ -376,13 +371,8 @@ class DataStorage {
                 //  Define a new instance of `classObj` using property values on `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  `push` the new instance to the respective container array in `data._types`
-                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
-                dataContainer.push(inst);
-
-                //  Compare the instance's `_created` property to `data._maxID` and assign the new value if greater than the current one
-                if(inst.id > this._maxID)
-                    this._maxID = inst.id;
+                //  Add the new instance to its respective container array
+                this._add(inst);
             }
             for(let id in localContainer.modified) {
                 if(!localContainer.modified.hasOwnProperty(id))
@@ -391,13 +381,8 @@ class DataStorage {
                 //  Define a new instance of `classObj` using property values on `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  Find the corresponding record in local memory by its `id` property
-                let ind = dataContainer.findIndex(el => el._created === inst.id);
-                if(ind < 0)
-                    throw new DSErrorReconcile('Failed to reconcile local and remote data: data instance returned by server as "modified" not found in memory', inst);
-
-                //  TODO SORT DATA CONTAINERS AFTER NEW DATA INSTANCES ARE `push`ed
-                dataContainer.splice(ind, 1, inst);
+                //  Replace the corresponding instance in the associated type container
+                this._replace(inst);
             }
             for(let id in localContainer.deleted) {
                 if(!localContainer.deleted.hasOwnProperty(id))
