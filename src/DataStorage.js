@@ -355,6 +355,7 @@ class DataStorage {
 
         //  Wrap response in `DSReconcileResult` and evaluate
         let result = new DSReconcileResult(response.hash, response.data);
+        let conflicts = {};
         for(let type in result.data) {
             if(!result.data.hasOwnProperty(type))
                 continue;
@@ -408,16 +409,23 @@ class DataStorage {
                 if(!localContainer.conflict.hasOwnProperty(id))
                     continue;
 
+                if(!conflicts[type])
+                    conflicts[type] = {};
+
+                conflicts[type][id] = localContainer.conflict[id];
+
                 throw new DSErrorReconcile('Processing of conflicting instances from server reconciliation not yet implemented in DataStorage.resolve()', `Instance id: ${id}`);
             }
         }
-
-        //  Send conflicts to `_resolve()`
 
         //  Implicit update of sync result
         sync.resolve = result;
         sync.remote = result.hash;
         sync.local = await this._hash();
+
+        //  Resolve conflicts
+        if(Object.keys(conflicts).length > 0)
+            this._resolve(conflicts, sync);
 
         //  Return `result`
         return result;
