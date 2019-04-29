@@ -29,7 +29,7 @@ class DataStorage {
 
         /** **JavaScript** `Map` storing containers for all data types
          *
-         * @property {DSDataRecordContainer} _created
+         * @property {DSDataRecordContainer} _types
          *
          * @private
          */
@@ -579,9 +579,9 @@ class DataStorage {
     /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
      *
      * @param {string} url - The URL of the request target file
-     * @param {object[]} [headers=[]] - An array of request headers to be set on the XHR object before it is sent
+     * @param {string[][]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
-     * @returns {PromiseLike<object>} Resolves to the value of the server response
+     * @returns {PromiseLike<string>} Resolves to the value of the server response
      *
      * @private
      */
@@ -640,9 +640,9 @@ class DataStorage {
      *
      * @param {(object|string)} data - The data object to be serialized and sent as the request body
      * @param {string} url - The URL of the request target file
-     * @param {object.<header, value>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {string[][]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
-     * @returns {PromiseLike<object>} Resolves to the value of the server response
+     * @returns {PromiseLike<string>} Resolves to the value of the server response
      *
      * @private
      */
@@ -1221,19 +1221,35 @@ class DSSyncResult {
  *
  * @extends Error
  *
- * @param {string} message - message describing this error
- * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
- * @param {string} [stack] - The execution stack snapshot at the time the error was constructed -- relies on correct inheritance/extension of `Error`
- *
  * @abstract
  */
 class DSError extends Error {
+    /** Constructor derives custom message from provided `message` argument
+     *
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance, objects, or condition (described in text) that caused this error to be generated
+     */
     constructor(message, source) {
         super(message);
+
+        /** Custom error message
+         *      `{new line}<name>: <message | '-'><{new line}source | ''>`
+         *
+         * @type {string}
+         */
         this.message = `\n${this.name}: ${message ? message : '-'}${source? `\n${source.toString()}` : ''}`;
+
+        /** Abstract context info
+         *
+         */
         this.source = source;
     }
 
+    /** Error type/constructor name
+     *
+     * @type string
+     * @readonly
+     */
     get name() {
         return this.constructor.name;
     }
@@ -1251,9 +1267,9 @@ class DSError extends Error {
  *
  */
 class DSErrorSync extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1264,9 +1280,9 @@ class DSErrorSync extends DSError {
  *
  */
 class DSErrorReconcile extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1277,9 +1293,9 @@ class DSErrorReconcile extends DSError {
  *
  */
 class DSErrorComputeHashDigest extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1290,9 +1306,9 @@ class DSErrorComputeHashDigest extends DSError {
  *
  */
 class DSErrorConvertFromHexString extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1302,9 +1318,9 @@ class DSErrorConvertFromHexString extends DSError {
  *
  */
 class DSErrorConvertToHexString extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1315,9 +1331,9 @@ class DSErrorConvertToHexString extends DSError {
  *
  */
 class DSErrorReadLocalData extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1327,9 +1343,9 @@ class DSErrorReadLocalData extends DSError {
  *
  */
 class DSErrorWriteLocalStorage extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1340,9 +1356,9 @@ class DSErrorWriteLocalStorage extends DSError {
  *
  */
 class DSErrorRemoteDataLoad extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1353,9 +1369,9 @@ class DSErrorRemoteDataLoad extends DSError {
  *
  */
 class DSErrorXhrGetRequest extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1365,9 +1381,9 @@ class DSErrorXhrGetRequest extends DSError {
  *
  */
 class DSErrorXhrGetRequestStatus extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1377,9 +1393,9 @@ class DSErrorXhrGetRequestStatus extends DSError {
  *
  */
 class DSErrorXhrPostRequest extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1389,9 +1405,9 @@ class DSErrorXhrPostRequest extends DSError {
  *
  */
 class DSErrorXhrPostRequestStatus extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1402,9 +1418,9 @@ class DSErrorXhrPostRequestStatus extends DSError {
  *
  */
 class DSErrorSerializeJSON extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1414,9 +1430,9 @@ class DSErrorSerializeJSON extends DSError {
  *
  */
 class DSErrorParseJSON extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1426,9 +1442,9 @@ class DSErrorParseJSON extends DSError {
  *
  */
 class DSErrorCompileDataString extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1439,9 +1455,9 @@ class DSErrorCompileDataString extends DSError {
  *
  */
 class DSErrorGetLastSync extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
@@ -1451,9 +1467,9 @@ class DSErrorGetLastSync extends DSError {
  *
  */
 class DSErrorSetLastSync extends DSError {
-    /** Constructor passes arguments to the `DSError` constructor
+    /**
      * @param {string} message - message describing this error
-     * @param {Error|string} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
      */
     constructor(message, source) {
         super(message, source);
