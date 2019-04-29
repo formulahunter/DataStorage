@@ -147,49 +147,49 @@ function reconcile($data) {
     $server = new stdClass();
     foreach($compiled as $type => $typeArr) {
         //  Skip `$compiled->hash` which is a `number`
-        if(!is_object($typeArr)) {
+        if(!is_object($typeArr))
             continue;
-        }
 
         LOG && $output .= "#### `$type` records" . str_repeat(LN, 2);
 
         //  Select instances from `$file` that have been created, modified, or deleted since `$lastSync`
         LOG && $output .= '##### screening server records against last-sync' . LN;
         $server->$type = new stdClass();
-        foreach ($file->$type as $serverInst) {
+        foreach($file->$type as $serverInst) {
             //  Note that `$type` values are coming from `$compiled` so no need to check for `$type === "deleted"`
             $id = $serverInst->_created;
 
             //  Check if the instance was created since `$lastSync`
             //  If not, check if it was modified since `$lastSync`
-            if ($id > $lastSync) {
+            if($id > $lastSync) {
                 LOG && $output .= '**server instance `' . $id . '` created after last sync**' . LN_JSON;
                 LOG && $output .= str_repeat(IN, 2) . '**> adding to `server->new` container**' . LN;
-
-                if (!isset($server->$type->new)) {
+                if(!isset($server->$type->new))
                     $server->$type->new = new stdClass();
-                }
+
                 $server->$type->new->$id = $serverInst;
-            } else if ((isset($serverInst->_modified) && $serverInst->_modified > $lastSync)) {
+            }
+            else if((isset($serverInst->_modified) && $serverInst->_modified > $lastSync)) {
                 LOG && $output .= '**server instance `' . $id . '` modified after last sync**' . LN_JSON;
                 LOG && $output .= str_repeat(IN, 2) . '**> adding to `server->modified` container**' . LN_JSON;
-                if (!isset($server->$type->modified)) {
+
+                if(!isset($server->$type->modified))
                     $server->$type->modified = new stdClass();
-                }
+
                 $server->$type->modified->$id = $serverInst;
             }
             else {
                 LOG && $output .= 'server instance `' . $id . '` unchanged since last sync' . LN_JSON;
             }
         }
-        foreach ($file->deleted->$type as $serverInst) {
+        foreach($file->deleted->$type as $serverInst) {
             $id = $serverInst->_created;
 
             //  Check if the instance was deleted since `$lastSync`
-            if ($serverInst->_deleted > $lastSync) {
-                if (!isset($server->$type->deleted)) {
+            if($serverInst->_deleted > $lastSync) {
+                if(!isset($server->$type->deleted))
                     $server->$type->deleted = new stdClass();
-                }
+
                 $server->$type->deleted->$id = $serverInst;
             }
         }
@@ -395,13 +395,11 @@ function reconcile($data) {
 
         //  Clean up `$compiled` to minimize data transfer
         foreach($compiled->$type as $status => $statusArray) {
-            if(count(get_object_vars($compiled->$type->$status)) === 0) {
+            if(count(get_object_vars($compiled->$type->$status)) === 0)
                 unset($compiled->$type->$status);
-            }
         }
-        if(count(get_object_vars($compiled->$type)) === 0) {
+        if(count(get_object_vars($compiled->$type)) === 0)
             unset($compiled->$type);
-        }
     }
 
     //  Write all changes to disk
