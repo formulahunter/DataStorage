@@ -1,6 +1,47 @@
 <?php
 
-$file = json_decode(file_get_contents('data/demo.json'));
+const LOG = true;
+const LN = "\n";
+const LN_JSON = "  \n";
+const IN = '    ';
+const IN_JSON = '  ';
+const URL = __FILE__;
+LOG && $output = '';
+
+
+
+
+$file = json_decode(file_get_contents('../data/demo.json'));
+
+function json_indent($jobj) {
+    //  Indented JSON strings are formatted as follows:
+    //    1) The JSON object `$jobj` is encoded
+    //      i) `JSON_PRETTY_PRINT` must be one of the encoding options
+    //    2) 4-space indents are reduced to 2-space
+    //    3) Newlines are appended with a single 4-space indent (namely **Markdown** code-block formatting)
+    //      i) A single 4-space indent is prepended to the entire string, since it would not otherwise be inserted via the newline replace/append
+    return IN . str_replace(LN, LN . IN, str_replace(IN, IN_JSON, json_encode($jobj, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)));
+}
+function json_code_block($jobj) {
+    //  Indented JSON strings are formatted for **Markdown** output as follows:
+    //  Two blank lines are inserted both before and after the string returned by json_indent() to preserve the code-block section in **Markdown** syntax
+    //    - An indented block of text with un-indented text on the line immediately before or after will not be printed as a code block
+    return str_repeat(LN, 2) . json_indent($jobj) . str_repeat(LN, 2);
+}
+function json_code_block_b($jobj) {
+    //  Indented JSON strings are formatted for **Markdown** output as follows:
+    //  Two blank lines are inserted both before and after the string returned by json_indent() to preserve the code-block section in **Markdown** syntax
+    //    - An indented block of text with un-indented text on the line immediately before or after will not be printed as a code block
+    return str_repeat(LN, 2) . $jobj . str_repeat(LN, 2);
+}
+function json_block_quote($jobj) {
+    return '> ' . str_replace(LN, '> ' . LN, $jobj);
+}
+function count_nl($subject) {
+    //  Count the number of newline charachters (as defined by `LN`) in a string
+    return substr_count($subject, LN);
+}
+
 
 function getHash() {
     global $file;
@@ -38,26 +79,31 @@ function getHash() {
  * @return false|string
  */
 function reconcile($data) {
-/*
-    DATA RECONCILIATION
-    Data reconciliation is based on three inputs: lastSync, data provided by the client, and data saved on the server
-     - `$recon` is the 'instances' data passed from the client, assumed to all be after `$lastSync`
-     - The entire data file is retained in `$file`
-     - `$compiled` is where the results are compiled to be returned to the client
-     - Each data instance in `$file` is screened against `$lastSync` and earlier instances are ignored
-     - Instance ID's are checked against the ID's provided by the client -- instances indicated as new, modified, and deleted are all cross-checked
-     - All ID's that do not match one received from the client are added to the `$compiled` list in the appropriate category
-     - All matches are checked for most recent modification relative to '$lastSync'
-        - If only one has been changed since `$lastSync`, the other is altered to match
-        - Else if the serialized data strings are exactly equal, the more recent copy is used
-        - Else both have changed since, and both are added to the appropriate 'conflicts' list
-     - Server data file is iterated first; cleared instances are removed from `$recon`; then any remaining instances in `$recon` are cleared against the same algorithm
-*/
-    global $file;
+    /*
+        DATA RECONCILIATION
+        Data reconciliation is based on three inputs: lastSync, data provided by the client, and data saved on the server
+         - `$recon` is the 'instances' data passed from the client, assumed to all be after `$lastSync`
+         - The entire data file is retained in `$file`
+         - `$compiled` is where the results are compiled to be returned to the client
+         - Each data instance in `$file` is screened against `$lastSync` and earlier instances are ignored
+         - Instance ID's are checked against the ID's provided by the client -- instances indicated as new, modified, and deleted are all cross-checked
+         - All ID's that do not match one received from the client are added to the `$compiled` list in the appropriate category
+         - All matches are checked for most recent modification relative to '$lastSync'
+            - If only one has been changed since `$lastSync`, the other is altered to match
+            - Else if the serialized data strings are exactly equal, the more recent copy is used
+            - Else both have changed since, and both are added to the appropriate 'conflicts' list
+         - Server data file is iterated first; cleared instances are removed from `$recon`; then any remaining instances in `$recon` are cleared against the same algorithm
+    */
+    global $file, $output;
 
     //  Retrieve 'lastSync' and 'pushed'
     $lastSync = $data->sync;
     $recon = $data->instances;
+    if(LOG) {
+        $output .= '> *$lastSync:* `' . gettype($lastSync) . ' ' . $lastSync . '`' . LN_JSON;
+        $output .= '> *$recon:*' . LN . '> ' . LN . json_block_quote(json_indent($recon)) . str_repeat(LN, 2);
+        $output .= LN;
+    }
 
     //  Compile all changes since lastSync
     //  Compare provided activities with activities on disk
@@ -71,6 +117,7 @@ function reconcile($data) {
     //    - Place each instance in an indicative container in `$compiled`
 
     //  `$compiled` is a container of containers for each data type/status combo, e.g. ingredients-new, ingredients-modified, etc.
+    LOG && $output .= '### constructing compiled-data index from local file' . LN;
     $compiled = new stdClass();
     foreach($file as $type => $value) {
         if($type === 'deleted')
@@ -82,7 +129,8 @@ function reconcile($data) {
         $compiled->$type->deleted = new stdClass();
         $compiled->$type->conflicts = new stdClass();
     }
-
+    LOG && $output .= '`$compiled` template:' . json_code_block($compiled);
+    LOG && $output .= LN;
 
     //  Check for ID conflicts and resolve
     //  The following nested loops iterate over every type/status combination
@@ -94,6 +142,8 @@ function reconcile($data) {
     //    - `$file` will be encoded and re-written to the server data file
     //    - `$compiled` will be returned to the client with changes since its last sync, including unresolved conflicts
     //  Therefore every data instance created/modified since the last sync should be sorted into one of these two containers
+
+    LOG && $output .= '### iterating over all data types in `$compiled`' . str_repeat(LN, 2);
     $server = new stdClass();
     foreach($compiled as $type => $typeArr) {
         //  Skip `$compiled->hash` which is a `number`
@@ -101,7 +151,10 @@ function reconcile($data) {
             continue;
         }
 
+        LOG && $output .= "#### `$type` records" . str_repeat(LN, 2);
+
         //  Select instances from `$file` that have been created, modified, or deleted since `$lastSync`
+        LOG && $output .= '##### screening server records against last-sync' . LN;
         $server->$type = new stdClass();
         foreach ($file->$type as $serverInst) {
             //  Note that `$type` values are coming from `$compiled` so no need to check for `$type === "deleted"`
@@ -110,15 +163,23 @@ function reconcile($data) {
             //  Check if the instance was created since `$lastSync`
             //  If not, check if it was modified since `$lastSync`
             if ($id > $lastSync) {
+                LOG && $output .= '**server instance `' . $id . '` created after last sync**' . LN_JSON;
+                LOG && $output .= str_repeat(IN, 2) . '**> adding to `server->new` container**' . LN;
+
                 if (!isset($server->$type->new)) {
                     $server->$type->new = new stdClass();
                 }
                 $server->$type->new->$id = $serverInst;
             } else if ((isset($serverInst->_modified) && $serverInst->_modified > $lastSync)) {
+                LOG && $output .= '**server instance `' . $id . '` modified after last sync**' . LN_JSON;
+                LOG && $output .= str_repeat(IN, 2) . '**> adding to `server->modified` container**' . LN_JSON;
                 if (!isset($server->$type->modified)) {
                     $server->$type->modified = new stdClass();
                 }
                 $server->$type->modified->$id = $serverInst;
+            }
+            else {
+                LOG && $output .= 'server instance `' . $id . '` unchanged since last sync' . LN_JSON;
             }
         }
         foreach ($file->deleted->$type as $serverInst) {
@@ -132,6 +193,7 @@ function reconcile($data) {
                 $server->$type->deleted->$id = $serverInst;
             }
         }
+        LOG && $output .= LN;
 
 
         //  Iterate through screened server data instances
@@ -141,10 +203,19 @@ function reconcile($data) {
         //        - Check for matches by text
         //        - Check for matches by text excluding timestamps
         //      - If no matches, add to `$compiled`
+        if(LOG) {
+            $output .= "##### checking screened server `$type` instances for conflicts" . LN;
+            if(count(get_object_vars($server->$type)) === 0)
+                $output .= 'no screened server instances to be checked for conflicts' . LN_JSON;
+        }
+
         foreach($server->$type as $serverStatus => $serverStatusArray) {
             foreach($serverStatusArray as $id => $serverInst) {
                 //  Assign `$serverInst` to `$compiled` as if no conflict will be found
                 $compiled->$type->$serverStatus->$id = $serverInst;
+                LOG && $output .= 'tentatively adding instance to `compiled->' . $serverStatus . '` container' . str_repeat(LN, 2);
+                LOG && $output .= json_indent($serverInst) . str_repeat(LN, 2);
+
                 if(!isset($recon->type))
                     continue;
 
@@ -172,9 +243,9 @@ function reconcile($data) {
                         //  Remove the matching instance from the client data array
                         unset($clientStatusArray->$id);
                     }
-                    /*else {
+                    else {
                         //  Check JSON text excluding timestamps
-                        $serverClone = clone $serverInst;
+                        /*$serverClone = clone $serverInst;
                         $clientClone = clone $clientInst;
 
                         //  If match is found excluding timestamps, evaluate timestamps:
@@ -182,80 +253,144 @@ function reconcile($data) {
                         //    - If not equal, mark as conflict to confirm duplicate on client
 
                         //  Remove the matching instance from the client data array
-                        unset($clientStatusArray->$id);
-                    }*/
+                        unset($clientStatusArray->$id);*/
+
+                        //  Temporary override/patch until advanced data matching is implementation
+                        LOG && $output .= "confirmed no conflicts for server instance id $id" . str_repeat(LN, 2);
+                    }
                 }
             }
+            LOG && $output .= LN;
         }
+        LOG && $output .= LN;
 
         //  Iterate through remaining client data instances
         //    - Compare with all instances stored on the server
         //    - Assign a resolved value of each into `$file` or `$compiled`
-        if(isset($recon->$type) && isset($recon->$type->new)) {
-            foreach($recon->$type->new as $id => $clientInst) {
-                $conflicts = array_filter($file->$type, function($val) use ($id) {return $val->_created === $id;});
-                if(count($conflicts) > 0) {
-                    array_unshift($conflicts, $clientInst);
-                    $compiled->$type->conflicts->$id = $conflicts;
-                }
-                else {
-                    array_unshift($file->$type, $clientInst);
-                }
-            }
-        }
-        if(isset($recon->$type) && isset($recon->$type->modified)) {
-            foreach($recon->$type->modified as $id => $clientInst) {
-                $matches = array_filter($file->$type, function($val) use ($id) {return $val->_created === $id;});
-                if(count($matches) === 0) {
-                    $compiled->$type->conflicts->$id = array($clientInst);
-                    //  If another instance has already been deleted, add it to the conflicts list
-                    $deleted = array_filter($file->deleted->$type, function($val) use ($id) {return $val->_created === $id;});
-                    if(count($deleted) > 0) {
-                        array_splice($compiled->$type->conflicts->$id, 0, 0, $deleted);
-                    }
-                }
-                else if(count($matches) > 1) {
-                    array_push($matches, $clientInst);
-                    $compiled->$type->conflicts->$id = $matches;
-                }
-                else {
-                    $ind = array_search($matches[0], $file->$type);
-                    array_splice($file->$type, $ind, 1, $matches);
-                }
-            }
-        }
-        if(isset($recon->$type) && isset($recon->$type->deleted)) {
-            foreach($recon->$type->deleted as $id => $clientInst) {
-                $matches = &array_filter($file->$type, function($val) use ($id) {return $val->_created === $id;});
-                if(count($matches) === 0) {
-                    $compiled->$type->conflicts->$id = array($clientInst);
-                }
-                else if(count($matches) > 1) {
-                    array_push($matches, $clientInst);
-                    $compiled->$type->conflicts->$id = $matches;
-                }
-                else {
-                    $ind = array_search($file->$type, $clientInst);
-                    array_splice($file->$type, $ind, 1);
-                    array_unshift($file->deleted->$type, $clientInst);
-                }
-            }
-        }
-        /*foreach($recon->$type as $clientStatus => $clientStatusArray) {
-            foreach($clientStatusArray as $id => $clientInst) {
-                //  Add the new client instance to the beginning of the server array as if no conflicts will be found
-                foreach($file->$type as $serverTypeArray) {
-                    array_shift($serverTypeArray, $clientInst);
-                    foreach($serverTypeArray as $ind => $serverInst) {
-                        if($serverInst->_created !== $id) {
-                            continue;
-                        }
+        if(isset($recon->$type)) {
+            LOG && $output .= "##### checking client data `$type` instances for conflicts" . LN_JSON;
 
-                        //  If a conflict is found, relocate the client instance from the beginning of the array to the location of the matched server instance
+            if(isset($recon->$type->new)) {
+                LOG && $output .= '###### checking `new` instances' . LN_JSON;
+                if(LOG && count(get_object_vars($server->$type)) === 0)
+                    $output .= 'no `new` client instances to be processed' . LN;
+
+                foreach($recon->$type->new as $id => $clientInst) {
+                    $conflicts = array_filter($file->$type, function($val) use ($id) {
+                        return $val->_created === $id;
+                    });
+                    if(count($conflicts) > 0) {
+                        LOG && $output .= count($conflicts) . " conflicts found in server data for `new` client id $id" . LN;
+                        array_unshift($conflicts, $clientInst);
+                        $compiled->$type->conflicts->$id = $conflicts;
+                    }
+                    else {
+                        LOG && $output .= "no conflicts for `new` client id $id" . LN;
+                        array_unshift($file->$type, $clientInst);
+                    }
+                }
+                LOG && $output .= LN;
+            }
+            if(isset($recon->$type->modified)) {
+                LOG && $output .= '###### iterating through `modified` instances' . LN_JSON;
+                if(LOG && count(get_object_vars($server->$type)) === 0)
+                    $output .= 'no `new` client instances to be processed' . LN;
+
+                foreach($recon->$type->modified as $id => $clientInst) {
+                    $matches = array_filter($file->$type, function($val) use ($id) {
+                        return $val->_created === $id;
+                    });
+                    LOG && $output .= count($matches) . " matches found in server data for `modified` client id $id" . LN_JSON;
+
+                    //  If there are no matches, then the server has no record to modify
+                    //    - Check the server's `deleted` container
+                    //      - If id match is found, compare modified and deleted timestamps
+                    //  If there are more than 1 matches, then mark all instances as conflicts
+                    //  If there is exactly one match, then:
+                    //    If the server instance's `_modified` property is `undefined` OR less than the client instance's `_modified` property, then resolve the match to the client instance
+                    //    Else mark the two instances as conflicts
+                    if(count($matches) === 0) {
+                        //  Temporary override/patch
+                        //  Mark the client instance as a solo conflict to draw attention
+                        //    - If another instance has already been deleted, add it to the conflicts list
+                        LOG && $output .= IN . '**THIS CASE IS NOT FULLY IMPLEMENTED AND MAY HAVE UNPREDICTABLE RESULTS**' . LN;
+
+                        $compiled->$type->conflicts->$id = array($clientInst);
+                        $deleted = array_filter($file->deleted->$type, function($val) use ($id) {
+                            return $val->_created === $id;
+                        });
+                        if(count($deleted) > 0)
+                            array_splice($compiled->$type->conflicts->$id, 0, 0, $deleted);
+                    }
+                    else if(count($matches) > 1) {
+                        //  There shouldn't be more than one match for a given id
+                        LOG && $output .= IN . '**ERROR - DATA FILE HAS BEEN IMPROPERLY MAINTAINED**' . LN;
+
+                        array_push($matches, $clientInst);
+                        $compiled->$type->conflicts->$id = $matches;
+                    }
+                    else {
+                        //  Replace the server's record with the client's subject to the following data-integrity check
+                        //  Criteria for clean replacement are:
+                        //    1) The matched server instance has not been `_modified`
+                        //      **OR**
+                        //    2) All modifications are congruent:
+                        //      a) The matched server instance was `_modified` before `lastSync`
+                        //        **AND**
+                        //      b) The client instance was modified more recently that the server instance
+                        if(!isset($matches[0]->_modified) || ($matches[0]->_modified < $lastSync && $clientInst->_modified > $matches[0]->_modified)) {
+                            LOG && $output .= IN . "clean replacement of client-modified record $id" . LN;
+
+                            $ind = array_search($matches[0], $file->$type);
+                            array_splice($file->$type, $ind, 1, $matches);
+                        }
+                        else {
+                            LOG && $output .= IN . "aborting incongruent replacement of modified record $id" . LN;
+
+                            array_push($matches, $clientInst);
+                            $compiled->$type->conflicts->$id = $matches;
+                        }
+                    }
+                }
+                LOG && $output .= LN;
+            }
+            if(isset($recon->$type->deleted)) {
+                LOG && $output .= '###### iterating through `deleted` instances' . LN;
+                foreach($recon->$type->deleted as $id => $clientInst) {
+                    $matches = array_filter($file->$type, function($val) use ($id) {
+                        return $val->_created === $id;
+                    });
+                    if(count($matches) === 0) {
+                        $compiled->$type->conflicts->$id = array($clientInst);
+                    }
+                    else if(count($matches) > 1) {
+                        array_push($matches, $clientInst);
+                        $compiled->$type->conflicts->$id = $matches;
+                    }
+                    else {
+                        $ind = array_search($file->$type, $clientInst);
+                        array_splice($file->$type, $ind, 1);
+                        array_unshift($file->deleted->$type, $clientInst);
                     }
                 }
             }
-        }*/
+            /*foreach($recon->$type as $clientStatus => $clientStatusArray) {
+                foreach($clientStatusArray as $id => $clientInst) {
+                    //  Add the new client instance to the beginning of the server array as if no conflicts will be found
+                    foreach($file->$type as $serverTypeArray) {
+                        array_shift($serverTypeArray, $clientInst);
+                        foreach($serverTypeArray as $ind => $serverInst) {
+                            if($serverInst->_created !== $id) {
+                                continue;
+                            }
+
+                            //  If a conflict is found, relocate the client instance from the beginning of the array to the location of the matched server instance
+                        }
+                    }
+                }
+            }*/
+            LOG && $output .= LN;
+        }
 
         //  Clean up `$compiled` to minimize data transfer
         foreach($compiled->$type as $status => $statusArray) {
@@ -269,6 +404,9 @@ function reconcile($data) {
     }
 
     //  Write all changes to disk
+    LOG && $output .= 'reconciled data to be written to file on server:' . json_code_block($file);
+    LOG && $output .= LN;
+    file_put_contents('../data/demo.json', json_encode($file, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
 
     //  Define container `data` object
     $result = new stdClass();
@@ -279,6 +417,8 @@ function reconcile($data) {
     $result->hash = getHash();
 
     //   Return selected activity and new hash
+    LOG && $output .= 'compiled data to be returned to client:' . json_code_block($result);
+    LOG && $output .= LN;
     return json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }
 
@@ -320,7 +460,7 @@ function saveNew($type, $inst, $ind) {
     $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
 
     //  Write new data string to file
-    file_put_contents('data/mealplan.json', $jstr);
+    file_put_contents('../data/demo.json', $jstr);
 
     //  Return new data hash
     return getHash();
@@ -335,7 +475,18 @@ function remove() {
 }
 
 $request = json_decode(file_get_contents('php://input'));
+
+//  Log new data string to file
+$title = date(DATE_COOKIE);
+LOG && $output .= $title . LN;
+LOG && $output .= str_repeat('=', strlen($title)) . LN;
+LOG && $output .= '> **url:** `' . URL . '`' . LN_JSON;
+LOG && $output .= '> **parameters:** `' . json_encode($request) . '`' . str_repeat(LN, 2);
+
 $query = $request->query;
+$qtitle = "query: `$query`";
+LOG && $output .= $qtitle . LN;
+LOG && $output .= str_repeat('-', strlen($qtitle)) . LN;
 switch($query) {
 //    case "count":
 //        echo countTxn();
@@ -345,6 +496,7 @@ switch($query) {
         return;
     case "reconcile":
         echo reconcile($request->data);
+        LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
         return;
     case "add":
         echo saveNew($request->type, $request->instance, $request->index);
