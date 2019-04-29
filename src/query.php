@@ -216,12 +216,13 @@ function reconcile($data) {
                 LOG && $output .= 'tentatively adding instance to `compiled->' . $serverStatus . '` container' . str_repeat(LN, 2);
                 LOG && $output .= json_indent($serverInst) . str_repeat(LN, 2);
 
-                if(!isset($recon->type))
+                //  Prevent `notice`/`warning` messages from being returned to client
+                if(!isset($recon->$type))
                     continue;
 
                 //  Check for conflicts and move `$serverInst` accordingly
                 foreach($recon->$type as $clientStatus => $clientStatusArray) {
-                    //  If not conflict exists, move on to the next client status
+                    //  If no conflict exists, move on to the next client status
                     if(isset($clientStatusArray->$id)) {
                         //  Assign local reference to matching instance in `$clientStatusArray`
                         $clientInst = $clientStatusArray->$id;
