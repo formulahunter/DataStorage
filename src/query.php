@@ -455,34 +455,11 @@ function reconcile($data) {
     return json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }
 
-function saveNew($type, $inst, $ind) {
+function saveNew($inst, $type) {
     global $file;
 
-    $typeArray = false;
-    switch($type) {
-        case 'ingredient':
-        case 'ingredients':
-            $typeArray = &$file->ingredients;
-            break;
-        case 'recipe':
-        case 'recipes':
-            $typeArray = &$file->recipes;
-            break;
-        case 'meal':
-        case 'meals':
-            $typeArray = &$file->meals;
-            break;
-        case 'list':
-        case 'lists':
-            $typeArray = &$file->lists;
-            break;
-        /*case 'receipt':
-        /*case 'receipts':
-            $typeArray = &$file->receipts;
-            break;*/
-        default:
-            die("Unknown data type \'$type\'");
-    }
+    if(!isset($file->$type))
+        die('CANNOT_ADD_INVALID_TYPE');
 
     //  Add new instance to the respective array
     add($file->$type, $inst);
@@ -530,7 +507,7 @@ switch($query) {
         LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
         return;
     case "add":
-        echo saveNew($request->type, $request->instance, $request->index);
+        echo saveNew($request->instance, $request->type);
         return;
 //    case "edit":
 //        echo modify($request->data);
