@@ -42,6 +42,38 @@ function count_nl($subject) {
     return substr_count($subject, LN);
 }
 
+function stdSort($a, $b) {
+    return $b->_created - $a->_created;
+}
+function add(&$container, $inst) {
+    //  Insert the new instance to the end of the array
+    $container[] = $inst;
+
+    //  Re-sort the array using the standard sort algorithm
+    usort($container, "stdSort");
+}
+function replace(&$container, $oldInst, $newInst) {
+    //  Retrieve the index of the old instance in the provided container array
+    $ind = array_search($oldInst, $container, true);
+    if(!$ind)
+        die('CANNOT_REPLACE_OLD_INST_NOT_FOUND');
+
+    //  Remove the old instance and insert the new one in its place
+    array_splice($container, $ind, 1, $newInst);
+
+    //  Re-sort the array using the standard sort algorithm
+    usort($container, "stdSort");
+}
+function remove($inst, &$container) {
+    //  Retrieve the index of the instance in the provided container array
+    $ind = array_search($inst, $container, true);
+    if(!$ind)
+        die('CANNOT_REMOVE_INST_NOT_FOUND');
+
+    //  Remove the instance
+    array_splice($container, $ind, 1);
+}
+
 
 function getHash() {
     global $file;
@@ -469,7 +501,7 @@ function modify() {
 
 }
 
-function remove() {
+function delete() {
 
 }
 
