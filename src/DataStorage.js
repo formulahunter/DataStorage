@@ -158,6 +158,7 @@ class DataStorage {
 
         //  `await` must be used with this call within an immediate `try..catch()` block to properly capture/log `DSError` instances
         //  Not sure why
+        //  Possibly to pause execution here and submit thrown errors to the catch() block, rather than return execution to the calling context and risk uncaught exceptions?
         try {
             return await this._sync();
         }
@@ -971,7 +972,7 @@ class DataStorage {
      *
      * @returns {*}
      *
-     * @throws DSErrorParseJSON
+     * @throws {DSErrorParseJSON}
      */
     static parse(jstr, reviver) {
         try {
@@ -990,7 +991,7 @@ class DataStorage {
      *
      * @returns {string}
      *
-     * @throws DSErrorSerializeJSON
+     * @throws {DSErrorSerializeJSON}
      */
     static serialize(val, replacer) {
         try {
@@ -1005,7 +1006,7 @@ class DataStorage {
      *
      * @returns {string} JSON string of all data instances stored in `.types` object
      *
-     * @throws DSErrorCompileDataString
+     * @throws {DSErrorCompileDataString}
      *
      * @private
      * @readonly
