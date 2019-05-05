@@ -1,6 +1,9 @@
 //  Ignore PhpStorm project directory
 .idea/*
 
+//  Ignore user data files
+data/*
+
 //  Ignore JSDoc documentation directory, which can be reconstructed at any
 //  time based on JSDoc comments in the source files
 doc/*
