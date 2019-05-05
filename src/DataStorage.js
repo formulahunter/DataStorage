@@ -671,7 +671,7 @@ class DataStorage {
     /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
      *
      * @param {string} url - The URL of the request target file
-     * @param {string[][]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {object.<string, string>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
      * @returns {PromiseLike<string>} Resolves to the value of the server response
      *
@@ -732,7 +732,7 @@ class DataStorage {
      *
      * @param {(object|string)} data - The data object to be serialized and sent as the request body
      * @param {string} url - The URL of the request target file
-     * @param {string[][]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {object.<string, string>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
      * @returns {PromiseLike<string>} Resolves to the value of the server response
      *
