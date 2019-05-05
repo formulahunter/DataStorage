@@ -119,7 +119,7 @@ class DataStorage {
     get _newID() {
         let id = Date.now();
         if(id <= this._maxID)
-            id = this._maxID + 1;
+            id = ++this._maxID;
 
         return id;
     }
@@ -434,25 +434,35 @@ class DataStorage {
      *
      *  @return {number} the index to which the new instance was sorted
      *
+     *  @throws {DSErrorSave} - see `DSErrorSave` & subclasses
+     *
      *  @private
      */
     _add(inst) {
-        //  Get the associated container array and check that there are no ID conflicts
+        //  Validate type against managed types
         let type = inst.constructor;
         let container = this._types.get(type);
-        let existing = container.find(el => el.id === inst.id);
-        if(existing)
-            throw new DSErrorAdd(`Cannot add new ${type.name}: ID ${inst.id} already exists in local data container`, [inst, existing]);
+        if(container === undefined)
+            throw new DSErrorAddInvalidType(`Cannot add unrecognized data type ${type.name} -- no container defined`, type);
 
-        //  `push` the new instance to the container
-        container.push(inst);
+        //  Check that there are no ID conflicts
+        let idConflict = container.find(el => el.id === inst.id);
+        if(idConflict)
+            throw new DSErrorAddIDConflict(`Cannot add new ${type.name}: ID ${inst.id} already exists in local data container`, [inst, idConflict]);
+
+        //  Update `_maxID` if necessary
+        if(inst.id > this._maxID)
+            this._maxID = inst.id;
+
+        //  `push()` the new instance to the container, unless it has already been added
+        let exInd = container.indexOf(inst);
+        if(exInd < 0)
+            container.push(inst);
+        else
+            console.warn(`${type.name} instance ${inst} already added to data container -- will not be added again`, [inst, container[exInd]]);
 
         //  Re-sort the array using the standard sort algorithm
         container.sort(stdSort);
-
-        //  Compare the instance's ID to `_maxID` and assign the new value if greater than the current one
-        if(inst.id > this._maxID)
-            this._maxID = inst.id;
 
         //  Return index of new instance (after sorting)
         return container.indexOf(inst);

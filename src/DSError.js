@@ -121,6 +121,30 @@ class DSErrorAdd extends DSError {
         super(message, source);
     }
 }
+/** Error thrown when `_add()` fails due to unrecognized data type
+ *
+ */
+class DSErrorAddInvalidType extends DSErrorAdd {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `_add()` fails due to data ID conflict
+ *
+ */
+class DSErrorAddIDConflict extends DSErrorAdd {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
 /** Error thrown when `_replace()` fails
  *
  */
