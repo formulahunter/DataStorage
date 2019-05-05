@@ -302,7 +302,8 @@ class DataStorage {
                 throw new DSErrorSyncFail('Failed to synchronize local and remote data', result.toString());
 
             //  Overwrite local storage with successfully reconciled data in memory
-            DataStorage.write(`${this.key}-data`, this._dataString);
+            //  `await` this call only in case a subsequent method (after `_sync()`) attempts to access local storage
+            await DataStorage.write(`${this.key}-data`, this._dataString);
         }
 
         //  At this point, either sync, reconciliation, or resolution must have succeeded
