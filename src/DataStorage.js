@@ -172,12 +172,55 @@ class DataStorage {
      *
      */
 
-    /** Save new data instance
+    /** Save *new* data instance
      * @param {DSDataRecord} inst - The data instance to be saved
      *
      * @returns {Promise<DSSyncResult>}
      */
-    save(inst) {}
+    async save(inst) {
+        //  Preliminary sync
+        let prelim;
+        try {
+            prelim = await this._sync();
+        }
+        catch(er) {
+            throw new DSErrorSavePrelimSync(`Unable to sync data before saving new ${inst.constructor.name} instance ${inst} -- aborting save`, er);
+        }
+
+        //  Assign the instance an ID
+        inst._created = this._newID;
+
+        //  Add to container array, sort the array, and get the index
+        this._add(inst);
+
+        //  Write the new data instance to local cache
+        let local = DataStorage.write(`${this.key}-data`, this._dataString);
+
+        //  Write the new data instance to remote data file
+        let data = {
+            query: 'add',
+            type: inst.constructor.name,
+            instance: inst
+        };
+        let url = 'query.php';
+        let headers = [{
+            header: 'content-type',
+            value: 'application/json;charset=UTF-8'
+        }];
+        let remote = DataStorage.xhrPost(data, url, headers);
+
+        //  Concluding sync
+        [local, remote] = await Promise.all([local, remote]);
+        let final;
+        try {
+            final = this._sync(local, remote);
+        }
+        catch(er) {
+            throw new DSErrorSaveFinalSync(`Unable to sync data before saving new ${inst.constructor.name} instance ${inst} -- aborting save`, er);
+        }
+
+        return final;
+    }
 
     /** Edit existing data instance
      * @param {DSDataRecord} inst

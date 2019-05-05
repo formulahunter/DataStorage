@@ -45,6 +45,44 @@ class DSError extends Error {
     }
 }
 
+/** Error thrown when `save()` fails
+ *
+ */
+class DSErrorSave extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `save()` fails due to failed preliminary sync
+ *
+ */
+class DSErrorSavePrelimSync extends DSErrorSave {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `save()` fails due to failed final sync
+ *
+ */
+class DSErrorSaveFinalSync extends DSErrorSave {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+
 /** Error thrown when `sync()` fails
  *
  */
