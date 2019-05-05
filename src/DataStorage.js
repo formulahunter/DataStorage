@@ -152,7 +152,7 @@ class DataStorage {
                 let inst = classObj.fromJSON(jobj);
 
                 //  Add the new instance to the respective container array
-                this._add(jobj);
+                this._add(inst);
             }
         }
 
