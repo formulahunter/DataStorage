@@ -48,7 +48,7 @@ class DSError extends Error {
 /** Error thrown when `sync()` fails
  *
  */
-class DSErrorSync extends DSError {
+class DSErrorSyncFail extends DSError {
     /**
      * @param {string} message - message describing this error
      * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
