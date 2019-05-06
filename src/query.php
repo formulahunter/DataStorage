@@ -90,6 +90,18 @@ function getHash() {
     //  Even if the data file is formatted for easy inspection in WebStorm, the hash value should compute correctly
     return hash('sha256', $jstr);
 }
+function write_file() {
+    global $file;
+
+    //  Encode data object back to JSON string to write to file
+    $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
+
+    //  Write new data string to file
+    file_put_contents('../data/demo.json', $jstr);
+
+    //  Return new data hash
+    return getHash();
+}
 
 
 /** RECONCILE
@@ -439,7 +451,7 @@ function reconcile($data) {
     //  Write all changes to disk
     LOG && $output .= 'reconciled data to be written to file on server:' . json_code_block($file);
     LOG && $output .= LN;
-    file_put_contents('../data/demo.json', json_encode($file, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    $newHash = write_file();
 
     //  Define container `data` object
     $result = new stdClass();
@@ -447,7 +459,7 @@ function reconcile($data) {
 
     //  MAKE SURE $file REFLECTS ALL CHANGES BEFORE COMPUTING HASH IN FOLLOWING COMMAND
     //   Compute new server hash and add to `$compiled`
-    $result->hash = getHash();
+    $result->hash = $newHash;
 
     //   Return selected activity and new hash
     LOG && $output .= 'compiled data to be returned to client:' . json_code_block($result);
@@ -464,14 +476,8 @@ function save($inst, $type) {
     //  Add new instance to the respective array
     add($file->$type, $inst);
 
-    //  Encode data object back to JSON string to write to file
-    $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
-
-    //  Write new data string to file
-    file_put_contents('../data/demo.json', $jstr);
-
-    //  Return new data hash
-    return getHash();
+    //  Write data to file & return new hash
+    return write_file();
 }
 
 function modify() {
