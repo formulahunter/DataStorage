@@ -455,7 +455,7 @@ function reconcile($data) {
     return json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 }
 
-function saveNew($inst, $type) {
+function save($inst, $type) {
     global $file;
 
     if(!isset($file->$type))
@@ -507,7 +507,7 @@ switch($query) {
         LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
         return;
     case "add":
-        echo saveNew($request->instance, $request->type);
+        echo save($request->instance, $request->type);
         return;
 //    case "edit":
 //        echo modify($request->data);
