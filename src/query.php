@@ -1,6 +1,6 @@
 <?php
 
-const LOG = true;
+const LOG = false;
 const LN = "\n";
 const LN_JSON = "  \n";
 const IN = '    ';
@@ -35,7 +35,7 @@ function json_code_block_b($jobj) {
     return str_repeat(LN, 2) . $jobj . str_repeat(LN, 2);
 }
 function json_block_quote($jobj) {
-    return '> ' . str_replace(LN, '> ' . LN, $jobj);
+    return '> ' . str_replace(LN, LN . '> ', $jobj);
 }
 function count_nl($subject) {
     //  Count the number of newline charachters (as defined by `LN`) in a string
@@ -52,14 +52,38 @@ function add(&$container, $inst) {
     //  Re-sort the array using the standard sort algorithm
     usort($container, "stdSort");
 }
-function replace(&$container, $oldInst, $newInst) {
-    //  Retrieve the index of the old instance in the provided container array
-    $ind = array_search($oldInst, $container, true);
-    if(!$ind)
-        die('CANNOT_REPLACE_OLD_INST_NOT_FOUND');
+function replace(&$container, $newInst) {
+    global $output;
+
+    //  Get the index of the instance to be replaced
+    $matches = array_filter($container, function($val) use ($newInst) {
+        return $val->_created === $newInst->_created;
+    });
+
+    LOG && $output .= '### replace()' . str_repeat(LN, 2);
+    LOG && $output .= count($matches) . ' matches found in container array  ' . LN;
+
+    //  If zero or multiple matches, exit with error
+    if(count($matches) === 0) {
+        echo 'CANNOT_REPLACE_NO_MATCH';
+        die;
+    }
+    else if(count($matches) > 1) {
+        echo 'CANNOT_REPLACE_MULTI_MACH';
+        die;
+    }
+
+    //  Get the index of the matched instance in the provided container array
+    $ind = array_search($matches[0], $container, true);
+    if($ind === false) {
+        echo 'CANNOT_REPLACE_OLD_INST_NOT_FOUND';
+        die;
+    }
+
+    LOG && $output .= 'index of match is ' . $ind . '  ' . LN;
 
     //  Remove the old instance and insert the new one in its place
-    array_splice($container, $ind, 1, $newInst);
+    array_splice($container, $ind, 1, array($newInst));
 
     //  Re-sort the array using the standard sort algorithm
     usort($container, "stdSort");
@@ -67,7 +91,7 @@ function replace(&$container, $oldInst, $newInst) {
 function remove($inst, &$container) {
     //  Retrieve the index of the instance in the provided container array
     $ind = array_search($inst, $container, true);
-    if(!$ind)
+    if($ind === false)
         die('CANNOT_REMOVE_INST_NOT_FOUND');
 
     //  Remove the instance
@@ -76,7 +100,7 @@ function remove($inst, &$container) {
 
 
 function getHash() {
-    global $file;
+    global $file, $output;
 
     //  Save a shallow copy of `$file` for manipulation without interfering with file contents
     $copy = clone $file;
@@ -84,17 +108,26 @@ function getHash() {
     //  Remove the deleted list from the JSON object and encode the resulting data for hashing
     unset($copy->deleted);
     $jstr = json_encode($copy, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-    file_put_contents('output.json', $jstr);
+
+    LOG && $output .= '### getHash()' . str_repeat(LN, 2);
+    LOG && $output .= '#### JSON object:' . json_code_block_b(json_indent($copy));
+    LOG && $output .= '#### JSON string:' . json_code_block_b(json_indent($jstr));
 
     //  json_encode() automatically removes whitespaces (spaces, tabs, newlines) in its return string
     //  Even if the data file is formatted for easy inspection in WebStorm, the hash value should compute correctly
-    return hash('sha256', $jstr);
+    $hash = hash('sha256', $jstr);
+    LOG && $output .= '#### digest: ' . str_repeat(LN, 2) . "computed hash digest: `$hash`" . str_repeat(LN, 2);
+    return $hash;
 }
 function write_file() {
-    global $file;
+    global $file, $output;
 
     //  Encode data object back to JSON string to write to file
     $jstr = json_encode($file, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
+
+    LOG && $output .= '### write_file()' . str_repeat(LN, 2);
+    LOG && $output .= '#### data file:' . json_code_block_b(json_indent($file));
+    LOG && $output .= '#### data string:' . json_code_block_b(json_indent($jstr));
 
     //  Write new data string to file
     file_put_contents('../data/demo.json', $jstr);
@@ -144,6 +177,7 @@ function reconcile($data) {
     $lastSync = $data->sync;
     $recon = $data->instances;
     if(LOG) {
+        $output .= '### reconcile()' . str_repeat(LN, 2);
         $output .= '> *$lastSync:* `' . gettype($lastSync) . ' ' . $lastSync . '`' . LN_JSON;
         $output .= '> *$recon:*' . LN . '> ' . LN . json_block_quote(json_indent($recon)) . str_repeat(LN, 2);
         $output .= LN;
@@ -161,7 +195,7 @@ function reconcile($data) {
     //    - Place each instance in an indicative container in `$compiled`
 
     //  `$compiled` is a container of containers for each data type/status combo, e.g. ingredients-new, ingredients-modified, etc.
-    LOG && $output .= '### constructing compiled-data index from local file' . LN;
+    LOG && $output .= '#### constructing compiled-data index from local file' . LN;
     $compiled = new stdClass();
     foreach($file as $type => $value) {
         if($type === 'deleted')
@@ -187,17 +221,17 @@ function reconcile($data) {
     //    - `$compiled` will be returned to the client with changes since its last sync, including unresolved conflicts
     //  Therefore every data instance created/modified since the last sync should be sorted into one of these two containers
 
-    LOG && $output .= '### iterating over all data types in `$compiled`' . str_repeat(LN, 2);
+    LOG && $output .= '#### iterating over all data types in `$compiled`' . str_repeat(LN, 2);
     $server = new stdClass();
     foreach($compiled as $type => $typeArr) {
         //  Skip `$compiled->hash` which is a `number`
         if(!is_object($typeArr))
             continue;
 
-        LOG && $output .= "#### `$type` records" . str_repeat(LN, 2);
+        LOG && $output .= "##### `$type` records" . str_repeat(LN, 2);
 
         //  Select instances from `$file` that have been created, modified, or deleted since `$lastSync`
-        LOG && $output .= '##### screening server records against last-sync' . LN;
+        LOG && $output .= '###### screening server records against last-sync' . LN;
         $server->$type = new stdClass();
         foreach($file->$type as $serverInst) {
             //  Note that `$type` values are coming from `$compiled` so no need to check for `$type === "deleted"`
@@ -248,7 +282,7 @@ function reconcile($data) {
         //        - Check for matches by text excluding timestamps
         //      - If no matches, add to `$compiled`
         if(LOG) {
-            $output .= "##### checking screened server `$type` instances for conflicts" . LN;
+            $output .= "###### checking screened server `$type` instances for conflicts" . LN;
             if(count(get_object_vars($server->$type)) === 0)
                 $output .= 'no screened server instances to be checked for conflicts' . LN_JSON;
         }
@@ -273,7 +307,7 @@ function reconcile($data) {
 
                         //  Assign conflicting instances to the 'conflicts' array based on `$type`
                         //  `$serverInst` will always be the first instance in this array
-                        if(is_array($compiled->$type->conflicts->$id)) {
+                        if(isset($compiled->$type->conflicts->$id)) {
                             //  If the conflicts array has already been defined, just push the new instance
                             $compiled->$type->conflicts->$id[] = $clientInst;
                         }
@@ -313,10 +347,10 @@ function reconcile($data) {
         //    - Compare with all instances stored on the server
         //    - Assign a resolved value of each into `$file` or `$compiled`
         if(isset($recon->$type)) {
-            LOG && $output .= "##### checking client data `$type` instances for conflicts" . LN_JSON;
+            LOG && $output .= "###### checking client data `$type` instances for conflicts" . LN_JSON;
 
             if(isset($recon->$type->new)) {
-                LOG && $output .= '###### checking `new` instances' . LN_JSON;
+                LOG && $output .= '####### checking `new` instances' . LN_JSON;
                 if(LOG && count(get_object_vars($server->$type)) === 0)
                     $output .= 'no `new` client instances to be processed' . LN;
 
@@ -337,7 +371,7 @@ function reconcile($data) {
                 LOG && $output .= LN;
             }
             if(isset($recon->$type->modified)) {
-                LOG && $output .= '###### iterating through `modified` instances' . LN_JSON;
+                LOG && $output .= '####### iterating through `modified` instances' . LN_JSON;
                 if(LOG && count(get_object_vars($server->$type)) === 0)
                     $output .= 'no `new` client instances to be processed' . LN;
 
@@ -400,7 +434,7 @@ function reconcile($data) {
                 LOG && $output .= LN;
             }
             if(isset($recon->$type->deleted)) {
-                LOG && $output .= '###### iterating through `deleted` instances' . LN;
+                LOG && $output .= '####### iterating through `deleted` instances' . LN;
                 foreach($recon->$type->deleted as $id => $clientInst) {
                     $matches = array_filter($file->$type, function($val) use ($id) {
                         return $val->_created === $id;
@@ -468,20 +502,42 @@ function reconcile($data) {
 }
 
 function save($inst, $type) {
-    global $file;
+    global $file, $output;
 
-    if(!isset($file->$type))
-        die('CANNOT_ADD_INVALID_TYPE');
+    LOG && $output .= '### save()' . str_repeat(LN, 2);
+    LOG && $output .= "#### new instance to be saved:" . json_code_block_b(json_indent($inst));
+
+    if(!isset($file->$type)) {
+        LOG && $output .= "unrecognized type $type cannot be saved to file" . str_repeat(LN, 2);
+        echo('CANNOT_ADD_INVALID_TYPE');
+        return null;
+    }
 
     //  Add new instance to the respective array
     add($file->$type, $inst);
+    LOG && $output .= "#### $type container after addition:" . json_code_block_b(json_indent($file->$type));
 
     //  Write data to file & return new hash
     return write_file();
 }
 
-function modify() {
+function modify($inst, $type) {
+    global $file, $output;
 
+    LOG && $output .= '### modify()' . str_repeat(LN, 2);
+    LOG && $output .= "#### new $type instance to replace existing:" . json_code_block_b(json_indent($inst));
+
+    if(!isset($file->$type)) {
+        LOG && $output .= "cannot replace unrecognized type $type" . str_repeat(LN, 2);
+        echo('CANNOT_MODIFY_INVALID_TYPE');
+        return null;
+    }
+
+    replace($file->$type, $inst);
+    LOG && $output .= "#### $type container after replacement:" . json_code_block_b(json_indent($file->$type));
+
+    //  Write data to file & return new hash
+    return write_file();
 }
 
 function delete() {
@@ -500,28 +556,31 @@ LOG && $output .= '> **parameters:** `' . json_encode($request) . '`' . str_repe
 $query = $request->query;
 $qtitle = "query: `$query`";
 LOG && $output .= $qtitle . LN;
-LOG && $output .= str_repeat('-', strlen($qtitle)) . LN;
+LOG && $output .= str_repeat('-', strlen($qtitle)) . str_repeat(LN, 2);
 switch($query) {
 //    case "count":
 //        echo countTxn();
-//        return;
+//        break;
     case "hash":
         echo getHash();
-        return;
+        break;
     case "reconcile":
         echo reconcile($request->data);
-        LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
-        return;
+        break;
     case "add":
         echo save($request->instance, $request->type);
-        return;
-//    case "edit":
-//        echo modify($request->data);
-//        return;
+        break;
+    case "edit":
+        echo modify($request->instance, $request->type);
+        break;
 //    case "delete":
 //        echo remove($request->data);
-//        return;
+//        break;
 }
+
+LOG && $output .= LN;
+LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
+return;
 
 //  SINGLE PHP FILE TO HANDLE HASH, COUNT, STAMPS, INSTANCES, NEW, RECONCILE
 //    - HASH IS MOST COMMON & SIMPLEST

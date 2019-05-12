@@ -224,11 +224,73 @@ class DataStorage {
     }
 
     /** Edit existing data instance
-     * @param {DSDataRecord} inst
+     *      This method replaces an existing data instance with the new version provided
+     *
+     * @param {DSDataRecord} inst - The NEW version of the instance
      *
      * @returns {Promise<DSSyncResult>}
      */
-    edit(inst) {}
+    async edit(inst) {
+        //  Local variable for preliminary sync result
+        let prelim;
+
+        //  Preliminary sync
+        try {
+            prelim = await this._sync();
+        }
+        catch(er) {
+            throw new DSErrorEditPrelimSync(`Unable to sync data before editing ${inst.constructor.name} instance ${inst} -- aborting edit`, er);
+        }
+
+        //  Write modified instance to local storage
+        let local;
+        try {
+            //  (Re)assign the `_modified` property
+            inst._modified = Date.now();
+
+            //  Add to container array, sort the array, and get the index
+            this._replace(inst);
+
+            //  Write the new data instance to local cache
+            local = DataStorage.write(`${this.key}-data`, this._dataString);
+        }
+        catch(er) {
+            throw new DSErrorEditLocalHash(`Error caught while initiating local replacement of ${inst.constructor.name} instance ${inst} -- aborting edit`, er);
+        }
+
+        //  Send modified instance to server
+        let remote;
+        try {
+            //  Write the new data instance to remote data file
+            let data = {
+                query: 'edit',
+                type: inst.constructor.name,
+                instance: inst
+            };
+            let url = 'query.php';
+            let headers = [{
+                header: 'content-type',
+                value: 'application/json;charset=UTF-8'
+            }];
+            remote = DataStorage.xhrPost(data, url, headers);
+
+            [local, remote] = await Promise.all([local, remote]);
+        }
+        catch(er) {
+            throw new DSErrorEditRemoteHash(`Error caught while initiating remote replacement of ${inst.constructor.name} instance ${inst} -- aborting edit`, er);
+        }
+
+        //  Concluding sync
+        let final;
+        try {
+            final = this._sync(local, remote);
+        }
+        catch(er) {
+            throw new DSErrorEditFinalSync(`Unable to sync data before saving new ${inst.constructor.name} instance ${inst} -- aborting save`, er);
+        }
+
+        return final;
+    }
 
     /** Delete data instance
      * @param {DSDataRecord} inst
@@ -521,12 +583,16 @@ class DataStorage {
      * @private
      */
     _replace(inst) {
-        //  Get the associated container array and index of old instance
+        //  Validate type against managed types
         let type = inst.constructor;
         let container = this._types.get(type);
+        if(container === undefined)
+            throw new DSErrorReplaceInvalidType(`Cannot add unrecognized data type ${type.name} -- no container defined`, type);
+
+        //  Get the associated container array and index of old instance
         let ind = container.findIndex(el => el.id === inst.id);
         if(ind < 0)
-            throw new DSErrorReplace(`Cannot replace ${inst} -- no matching instance found in the ${type.name} container`);
+            throw new DSErrorReplaceNoMatch(`Cannot replace ${inst} -- no matching instance found in the ${type.name} container`, inst);
 
         //  Replace the old instance with the new one
         container.splice(ind, 1, inst);
@@ -695,7 +761,7 @@ class DataStorage {
             let str = await DataStorage.encrypt(data);
             localStorage.setItem(key, str);
 
-            return DataStorage.hash(str);
+            return DataStorage.hash(data);
         }
         catch(er) {
             if(!(er instanceof DSError))
@@ -895,7 +961,7 @@ class DataStorage {
         );
 
         //  Print `cipher` to console/output for debugging
-        console.debug(cipher);
+        // console.debug(cipher);
 
         //  Return cipher text and parameters
         return DataStorage.serialize({

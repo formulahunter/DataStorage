@@ -82,6 +82,67 @@ class DSErrorSaveFinalSync extends DSErrorSave {
     }
 }
 
+/** Error thrown when `edit()` fails
+ *
+ */
+class DSErrorEdit extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `edit()` fails due to failed preliminary sync
+ *
+ */
+class DSErrorEditPrelimSync extends DSErrorEdit {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `edit()` fails due to failed local hash digest
+ *
+ */
+class DSErrorEditLocalHash extends DSErrorEdit {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `edit()` fails due to failed remote hash digest
+ *
+ */
+class DSErrorEditRemoteHash extends DSErrorEdit {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `edit()` fails due to failed final sync
+ *
+ */
+class DSErrorEditFinalSync extends DSErrorEdit {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
 
 /** Error thrown when `sync()` fails
  *
@@ -183,6 +244,7 @@ class DSErrorAddIDConflict extends DSErrorAdd {
         super(message, source);
     }
 }
+
 /** Error thrown when `_replace()` fails
  *
  */
@@ -195,6 +257,32 @@ class DSErrorReplace extends DSError {
         super(message, source);
     }
 }
+/** Error thrown when `_replace()` fails due to unrecognized data type
+ *
+ */
+class DSErrorReplaceInvalidType extends DSErrorReplace {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `_replace()` fails due to absence of corresponding instance
+ *
+ */
+class DSErrorReplaceNoMatch extends DSErrorReplace {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
+
 /** Error thrown when `_remove()` fails
  *
  */
