@@ -749,7 +749,8 @@ class DataStorage {
                 throw new DSErrorRemoteDataLoad(`Failed to load remote data for key \`${key}\``);
             }
 
-            return DataStorage.decrypt(cipher);
+            // return DataStorage.decrypt(cipher);
+            return cipher;
         }
         catch(er) {
             if(!(er instanceof DSError))
@@ -772,8 +773,8 @@ class DataStorage {
             if(!(data instanceof String || typeof data === 'string'))
                 data = DataStorage.serialize(data);
 
-            let str = await DataStorage.encrypt(data);
-            localStorage.setItem(key, str);
+            // let str = await DataStorage.encrypt(data);
+            localStorage.setItem(key, data);
 
             return DataStorage.hash(data);
         }
