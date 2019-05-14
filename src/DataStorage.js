@@ -217,7 +217,7 @@ class DataStorage {
             type: inst.constructor.name,
             instance: inst
         };
-        let url = 'query.php';
+        let url = 'DataStorage/src/query.php';
         let headers = [{
             header: 'content-type',
             value: 'application/json;charset=UTF-8'
@@ -281,7 +281,7 @@ class DataStorage {
                 type: inst.constructor.name,
                 instance: inst
             };
-            let url = 'query.php';
+            let url = 'DataStorage/src/query.php';
             let headers = [{
                 header: 'content-type',
                 value: 'application/json;charset=UTF-8'
@@ -349,7 +349,7 @@ class DataStorage {
         //  Fetch remote server hash asynchronously (if necessary)
         if(!remote) {
             let data = {query: 'hash'};
-            let url = 'query.php';
+            let url = 'DataStorage/src/query.php';
             let headers = [{
                 header: 'content-type',
                 value: 'application/json;charset=UTF-8'
@@ -463,7 +463,7 @@ class DataStorage {
                     instances: instances
             }
         };
-        let url = 'query.php';
+        let url = 'DataStorage/src/query.php';
         let headers = [{
             header: 'content-type',
             value: 'application/json;charset=UTF-8'

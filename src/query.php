@@ -8,10 +8,12 @@ const IN_JSON = '  ';
 const URL = __FILE__;
 LOG && $output = '';
 
+const DATA_FILE = '../../data/mealplan.json';
+const LOG_FILE = '../../log/log.md';
 
 
 
-$file = json_decode(file_get_contents('../data/demo.json'));
+$file = json_decode(file_get_contents(DATA_FILE));
 
 function json_indent($jobj) {
     //  Indented JSON strings are formatted as follows:
@@ -130,7 +132,7 @@ function write_file() {
     LOG && $output .= '#### data string:' . json_code_block_b(json_indent($jstr));
 
     //  Write new data string to file
-    file_put_contents('../data/demo.json', $jstr);
+    file_put_contents(DATA_FILE, $jstr);
 
     //  Return new data hash
     return getHash();
@@ -579,7 +581,7 @@ switch($query) {
 }
 
 LOG && $output .= LN;
-LOG && file_put_contents('../log/demo-output.md', $output . file_get_contents('../log/demo-output.md'));
+LOG && file_put_contents(LOG_FILE, $output . file_get_contents(LOG_FILE));
 return;
 
 //  SINGLE PHP FILE TO HANDLE HASH, COUNT, STAMPS, INSTANCES, NEW, RECONCILE
