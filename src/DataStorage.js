@@ -44,6 +44,7 @@ class DataStorage {
         for(let cls of types) {
             this._types.set(cls, []);
             this._deleted.set(cls, []);
+            DataStorage[cls.name] = cls;
         }
 
         /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
@@ -158,7 +159,7 @@ class DataStorage {
                 continue;
 
             //  Designate the associated class object for each type
-            let classObj = window[type];
+            let classObj = DataStorage[type];
 
             //  Iterate through elements in each type container array
             for(let jobj of jdat[type]) {
@@ -480,7 +481,7 @@ class DataStorage {
             //  Designate the associated class object, data container, and local container for each type
             //  `dataContainer` is the `DataStorage` instance's container for the designated data type
             //  `localContainer` is the JSON data container object defined in the server's response
-            let classObj = window[type];
+            let classObj = DataStorage[type];
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
