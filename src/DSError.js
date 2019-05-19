@@ -45,6 +45,28 @@ class DSError extends Error {
     }
 }
 
+/** Error thrown when a value is of invalid type
+ *
+ */
+class DSErrorInvalidType extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+class DSErrorSearchInvalidType extends DSErrorInvalidType {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+
 /** Error thrown when `save()` fails
  *
  */

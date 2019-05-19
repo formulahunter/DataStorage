@@ -91,6 +91,25 @@ class DSDataRecord {
         return this._created;
     }
 
+    /** Return a new instance whose properties values are identical to the current instance
+     *      **EXCLUDES** the `_created` and `_modified` properties unless `id` argument is `true`
+     *
+     * @param {boolean} id - if `true`, the instance's _created` and `_modified` properties are also copied; defaults to `false`
+     *
+     * @returns {DSDataRecord}
+     *
+     * @abstract
+     */
+    copy(id = false) {
+        let copy = new this.constructor;
+        if(id === true) {
+            copy._created = this._created;
+            copy._modified = this._modified;
+        }
+
+        return copy;
+    }
+
     /** Get the JSON object literal representation of the data instance
      *
      * @returns {DSDataJSONRecord}

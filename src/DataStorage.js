@@ -56,6 +56,56 @@ class DataStorage {
         this._maxID = 0;
     }
 
+    /** Return the index of the closest-matching instance
+     *      If the exact instance is found, return its index on `index`
+     *      Else if another instance with matching ID is found, return its index on `id`
+     *      Else if another instance(s) with matching properties is found, return it(s) index in an array on `hash`
+     *      Else return `false`
+     *
+     * @param {DSDataRecord} inst - the data instance to search for
+     *
+     * @return {Promise<{index: number}|boolean|{id: number}|{hash: number[]}|boolean>}
+     */
+    async search(inst) {
+        let container;
+        try {
+            container = this._getContainer(inst);
+        }
+        catch(er) {
+            if(!(er instanceof DSErrorInvalidType))
+                throw er;
+
+            throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
+        }
+
+        //  Search for the exact instance
+        //  Return its index on `index`
+        let findInst = container.indexOf(inst);
+        if(findInst >= 0)
+            return {index: findInst};
+
+        //  Search for an instance with matching ID
+        //  Return its index on `id`
+        let findID = container.findIndex(el => el.id === inst.id);
+        if(findID >= 0)
+            return {id: findID};
+
+        //  Search for an instance(s) with identical properties (excluding `_created` & `_modified`)
+        //  Return their indices on `hash`
+        let hash = await DataStorage.hash(DataStorage.serialize(inst.copy().toJSON()));
+        let findHash = [];
+        for(let el of container) {
+            let elHash = await DataStorage.hash(DataStorage.serialize(el.copy().toJSON()));
+            if(elHash === hash)
+                findHash.push(container.indexOf(el));
+        }
+        if(findHash.length > 0)
+            return {hash: findHash};
+
+        //  Return false
+        return false;
+    }
+
 
     /** ##SECTION - Maintain last-sync parameter
      *
@@ -657,6 +707,24 @@ class DataStorage {
         }
 
         return ind;
+    }
+
+    /** Gets the container array for a provided `DSDataRecord`
+     *
+     * @param {DSDataRecord} inst - the instance whose container is sought
+     *
+     * @return {array} the respective type container
+     *
+     * @private
+     */
+    _getContainer(inst) {
+        //  Validate type against managed types
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        if(container === undefined)
+            throw new DSErrorInvalidType(`Cannot get container of unrecognized type ${type.name} -- no container defined`, type);
+
+        return container;
     }
 
     /** ##SECTION - Compute cryptographic hash digests
