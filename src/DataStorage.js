@@ -105,6 +105,15 @@ class DataStorage {
         //  Return false
         return false;
     }
+    getID(id, type) {
+        if(!(id instanceof Number || typeof id == 'number'))
+            throw new TypeError(`Cannot get data record with non-numeric type ${id}`);
+        if(DataStorage[type.name] !== type)
+            throw new DSErrorInvalidType(`Cannot get data record with unrecognized type ${type.name}`, type);
+
+        let container = this._types.get(type);
+        return container.find(el => el._created === id);
+    }
 
 
     /** ##SECTION - Maintain last-sync parameter
