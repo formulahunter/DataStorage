@@ -62,10 +62,13 @@ class DSDataRecord {
      *    **Note the use of `new this()`**
      *    This statement constructs a new instance of a subclass invoking `DSDataRecord.fromJSON()` with the `super` keyword
      *    As `fromJSON()` is a `static` method, the `this` keyword refers to the class object/constructor function itself
+     *    Subclasses must implement this method and instantiate their return instance using `super.fromJSON()`
      *
      * @param {DSDataJSONRecord} jobj - The raw JSON object literal
      *
      * @returns {DSDataRecord} Initialized data instance
+     *
+     * @abstract
      */
     static fromJSON(jobj) {
         if(jobj instanceof String || typeof jobj === 'string')
@@ -74,8 +77,7 @@ class DSDataRecord {
         let inst = new this();
 
         inst._created = jobj._created;
-        if(jobj._modified)
-            inst._modified = jobj._modified;
+        inst._modified = jobj._modified || 0;
 
         return inst;
     }
@@ -93,6 +95,7 @@ class DSDataRecord {
 
     /** Return a new instance whose properties values are identical to the current instance
      *      **EXCLUDES** the `_created` and `_modified` properties unless `id` argument is `true`
+     *      Subclasses must implement this method and instantiate their return instance using `super.copy()`
      *
      * @param {boolean} id - if `true`, the instance's _created` and `_modified` properties are also copied; defaults to `false`
      *
@@ -111,8 +114,11 @@ class DSDataRecord {
     }
 
     /** Get the JSON object literal representation of the data instance
+     *    Subclasses must implement this method and initiate their return value using `super.toJSON()`
      *
      * @returns {DSDataJSONRecord}
+     *
+     * @abstract
      */
     toJSON() {
         let jobj = {
@@ -126,8 +132,11 @@ class DSDataRecord {
 
     /** Get a human-readable string representation of the data instance, e.g. for console output
      *    Formatted to print the class name and ID
+     *    Subclasses must override this method
      *
      * @returns {string}
+     *
+     * @abstract
      */
     toString() {
         return `${this.constructor.name}{${this.id}`;
