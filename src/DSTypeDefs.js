@@ -1,3 +1,11 @@
+/** Request header object type
+ * @typedef {object} XHRHeader
+ *
+ * @property {string} header - the HTTP header to be set
+ * @property {string} value - the value to be set for the indicated header
+ */
+
+
 /** Timestamp type
  *   Integer greater than (not equal to) 0
  * typedef {number<int[!0, >]} DSTimestamp   //  #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing integer type with range constraint ('!' indicates exclusive bound, i.e. value cannot be equal to 0)
@@ -38,8 +46,8 @@ Object.freeze(DSDataActivityRank);
 /** Abstract data instance superclass
  * @since March 10, 2019
  *
- * @extends DSDataJSONRecord
- * @abstract
+ * @template D
+ * @extends {DSDataJSONRecord}
  */
 class DSDataRecord {
     constructor() {
@@ -64,11 +72,10 @@ class DSDataRecord {
      *    As `fromJSON()` is a `static` method, the `this` keyword refers to the class object/constructor function itself
      *    Subclasses must implement this method and instantiate their return instance using `super.fromJSON()`
      *
-     * @param {DSDataJSONRecord} jobj - The raw JSON object literal
+     * @template D
+     * @param {DSDataJSONRecord<D>} jobj - The raw JSON object literal
      *
-     * @returns {DSDataRecord} Initialized data instance
-     *
-     * @abstract
+     * @returns {D}
      */
     static fromJSON(jobj) {
         if(jobj instanceof String || typeof jobj === 'string')
@@ -97,14 +104,13 @@ class DSDataRecord {
      *      **EXCLUDES** the `_created` and `_modified` properties unless `id` argument is `true`
      *      Subclasses must implement this method and instantiate their return instance using `super.copy()`
      *
-     * @param {boolean} id - if `true`, the instance's _created` and `_modified` properties are also copied; defaults to `false`
+     * @template D
+     * @param {boolean} [id=false] - if `true`, the instance's _created` and `_modified` properties are also copied; defaults to `false`
      *
-     * @returns {DSDataRecord}
-     *
-     * @abstract
+     * @returns {D}
      */
     copy(id = false) {
-        let copy = new this.constructor;
+        let copy = new this.constructor();
         if(id === true) {
             copy._created = this._created;
             copy._modified = this._modified;
@@ -116,9 +122,8 @@ class DSDataRecord {
     /** Get the JSON object literal representation of the data instance
      *    Subclasses must implement this method and initiate their return value using `super.toJSON()`
      *
-     * @returns {DSDataJSONRecord}
-     *
-     * @abstract
+     * @template D
+     * @returns {DSDataJSONRecord<D>}
      */
     toJSON() {
         let jobj = {
@@ -135,8 +140,6 @@ class DSDataRecord {
      *    Subclasses must override this method
      *
      * @returns {string}
-     *
-     * @abstract
      */
     toString() {
         return `${this.constructor.name}{${this.id}`;
