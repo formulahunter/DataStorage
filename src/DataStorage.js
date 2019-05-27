@@ -72,10 +72,10 @@ class DataStorage {
             container = this._getContainer(inst);
         }
         catch(er) {
-            if(!(er instanceof DSErrorInvalidType))
-                throw er;
+            if(er instanceof DSErrorInvalidType)
+                throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
 
-            throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
+            throw new DSErrorSearch(`Search for instance with ID ${inst.id} failed`, er);
         }
 
         //  Search for the exact instance

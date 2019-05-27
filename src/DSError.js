@@ -45,9 +45,7 @@ class DSError extends Error {
     }
 }
 
-/** Error thrown when a value is of invalid type
- *
- */
+/** Error thrown when a value is of invalid type */
 class DSErrorInvalidType extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -57,6 +55,18 @@ class DSErrorInvalidType extends DSError {
         super(message, source);
     }
 }
+
+/** Error thrown when `DataStorage#search()` catches an exception other than invalid argument type (see `DSErrorSearchInvalidType`) */
+class DSErrorSearch extends DSError {
+    /**
+     * @param {string} message - message describing this error
+     * @param {*} [source] - `Error` instance or condition (described in text) that caused this error to be generated
+     */
+    constructor(message, source) {
+        super(message, source);
+    }
+}
+/** Error thrown when `DataStorage#search()` is called with an argument that is not recognized as a `DSDataRecord` subclass */
 class DSErrorSearchInvalidType extends DSErrorInvalidType {
     /**
      * @param {string} message - message describing this error
@@ -67,9 +77,7 @@ class DSErrorSearchInvalidType extends DSErrorInvalidType {
     }
 }
 
-/** Error thrown when `save()` fails
- *
- */
+/** Error thrown when `save()` fails */
 class DSErrorSave extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -79,9 +87,7 @@ class DSErrorSave extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `save()` fails due to failed preliminary sync
- *
- */
+/** Error thrown when `save()` fails due to failed preliminary sync */
 class DSErrorSavePrelimSync extends DSErrorSave {
     /**
      * @param {string} message - message describing this error
@@ -91,9 +97,7 @@ class DSErrorSavePrelimSync extends DSErrorSave {
         super(message, source);
     }
 }
-/** Error thrown when `save()` fails due to failed final sync
- *
- */
+/** Error thrown when `save()` fails due to failed final sync */
 class DSErrorSaveFinalSync extends DSErrorSave {
     /**
      * @param {string} message - message describing this error
@@ -104,9 +108,7 @@ class DSErrorSaveFinalSync extends DSErrorSave {
     }
 }
 
-/** Error thrown when `edit()` fails
- *
- */
+/** Error thrown when `edit()` fails */
 class DSErrorEdit extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -116,9 +118,7 @@ class DSErrorEdit extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `edit()` fails due to failed preliminary sync
- *
- */
+/** Error thrown when `edit()` fails due to failed preliminary sync */
 class DSErrorEditPrelimSync extends DSErrorEdit {
     /**
      * @param {string} message - message describing this error
@@ -128,9 +128,7 @@ class DSErrorEditPrelimSync extends DSErrorEdit {
         super(message, source);
     }
 }
-/** Error thrown when `edit()` fails due to failed local hash digest
- *
- */
+/** Error thrown when `edit()` fails due to failed local hash digest */
 class DSErrorEditLocalHash extends DSErrorEdit {
     /**
      * @param {string} message - message describing this error
@@ -140,9 +138,7 @@ class DSErrorEditLocalHash extends DSErrorEdit {
         super(message, source);
     }
 }
-/** Error thrown when `edit()` fails due to failed remote hash digest
- *
- */
+/** Error thrown when `edit()` fails due to failed remote hash digest */
 class DSErrorEditRemoteHash extends DSErrorEdit {
     /**
      * @param {string} message - message describing this error
@@ -152,9 +148,7 @@ class DSErrorEditRemoteHash extends DSErrorEdit {
         super(message, source);
     }
 }
-/** Error thrown when `edit()` fails due to failed final sync
- *
- */
+/** Error thrown when `edit()` fails due to failed final sync */
 class DSErrorEditFinalSync extends DSErrorEdit {
     /**
      * @param {string} message - message describing this error
@@ -166,9 +160,7 @@ class DSErrorEditFinalSync extends DSErrorEdit {
 }
 
 
-/** Error thrown when `sync()` fails
- *
- */
+/** Error thrown when `sync()` fails */
 class DSErrorSyncFail extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -179,9 +171,7 @@ class DSErrorSyncFail extends DSError {
     }
 }
 
-/** Error thrown when `reconcile()` fails
- *
- */
+/** Error thrown when `reconcile()` fails */
 class DSErrorReconcile extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -192,9 +182,7 @@ class DSErrorReconcile extends DSError {
     }
 }
 
-/** Error thrown when `hash()` fails
- *
- */
+/** Error thrown when `hash()` fails */
 class DSErrorComputeHashDigest extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -205,9 +193,7 @@ class DSErrorComputeHashDigest extends DSError {
     }
 }
 
-/** Error thrown when `fromHexString()` fails
- *
- */
+/** Error thrown when `fromHexString()` fails */
 class DSErrorConvertFromHexString extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -217,9 +203,7 @@ class DSErrorConvertFromHexString extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `toHextString()` fails
- *
- */
+/** Error thrown when `toHextString()` fails */
 class DSErrorConvertToHexString extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -230,9 +214,7 @@ class DSErrorConvertToHexString extends DSError {
     }
 }
 
-/** Error thrown when `_add()` fails
- *
- */
+/** Error thrown when `_add()` fails */
 class DSErrorAdd extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -242,9 +224,7 @@ class DSErrorAdd extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `_add()` fails due to unrecognized data type
- *
- */
+/** Error thrown when `_add()` fails due to unrecognized data type */
 class DSErrorAddInvalidType extends DSErrorAdd {
     /**
      * @param {string} message - message describing this error
@@ -254,9 +234,7 @@ class DSErrorAddInvalidType extends DSErrorAdd {
         super(message, source);
     }
 }
-/** Error thrown when `_add()` fails due to data ID conflict
- *
- */
+/** Error thrown when `_add()` fails due to data ID conflict */
 class DSErrorAddIDConflict extends DSErrorAdd {
     /**
      * @param {string} message - message describing this error
@@ -267,9 +245,7 @@ class DSErrorAddIDConflict extends DSErrorAdd {
     }
 }
 
-/** Error thrown when `_replace()` fails
- *
- */
+/** Error thrown when `_replace()` fails */
 class DSErrorReplace extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -279,9 +255,7 @@ class DSErrorReplace extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `_replace()` fails due to unrecognized data type
- *
- */
+/** Error thrown when `_replace()` fails due to unrecognized data type */
 class DSErrorReplaceInvalidType extends DSErrorReplace {
     /**
      * @param {string} message - message describing this error
@@ -291,9 +265,7 @@ class DSErrorReplaceInvalidType extends DSErrorReplace {
         super(message, source);
     }
 }
-/** Error thrown when `_replace()` fails due to absence of corresponding instance
- *
- */
+/** Error thrown when `_replace()` fails due to absence of corresponding instance */
 class DSErrorReplaceNoMatch extends DSErrorReplace {
     /**
      * @param {string} message - message describing this error
@@ -305,9 +277,7 @@ class DSErrorReplaceNoMatch extends DSErrorReplace {
 }
 
 
-/** Error thrown when `_remove()` fails
- *
- */
+/** Error thrown when `_remove()` fails */
 class DSErrorRemove extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -318,9 +288,7 @@ class DSErrorRemove extends DSError {
     }
 }
 
-/** Error thrown when `localStorage` fails to read a given key
- *
- */
+/** Error thrown when `localStorage` fails to read a given key */
 class DSErrorReadLocalData extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -330,9 +298,7 @@ class DSErrorReadLocalData extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `localStorage` fails to write to a given key
- *
- */
+/** Error thrown when `localStorage` fails to write to a given key */
 class DSErrorWriteLocalStorage extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -343,9 +309,7 @@ class DSErrorWriteLocalStorage extends DSError {
     }
 }
 
-/** Error thrown when no local data is found and remote data load fails
- *
- */
+/** Error thrown when no local data is found and remote data load fails */
 class DSErrorRemoteDataLoad extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -356,9 +320,7 @@ class DSErrorRemoteDataLoad extends DSError {
     }
 }
 
-/** Error thrown when XHR GET request fails
- *
- */
+/** Error thrown when XHR GET request fails */
 class DSErrorXhrGetRequest extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -368,9 +330,7 @@ class DSErrorXhrGetRequest extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when XHR GET request loads with bad status
- *
- */
+/** Error thrown when XHR GET request loads with bad status */
 class DSErrorXhrGetRequestStatus extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -380,9 +340,7 @@ class DSErrorXhrGetRequestStatus extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when XHR POST request fails
- *
- */
+/** Error thrown when XHR POST request fails */
 class DSErrorXhrPostRequest extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -392,9 +350,7 @@ class DSErrorXhrPostRequest extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when XHR POST request loads with a status other than `200`/`OK`
- *
- */
+/** Error thrown when XHR POST request loads with a status other than `200`/`OK` */
 class DSErrorXhrPostRequestStatus extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -405,9 +361,7 @@ class DSErrorXhrPostRequestStatus extends DSError {
     }
 }
 
-/** Error thrown when `JSON` fails to serialize an object
- *
- */
+/** Error thrown when `JSON` fails to serialize an object */
 class DSErrorSerializeJSON extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -417,9 +371,7 @@ class DSErrorSerializeJSON extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `JSON` fails to parse a string
- *
- */
+/** Error thrown when `JSON` fails to parse a string */
 class DSErrorParseJSON extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -429,9 +381,7 @@ class DSErrorParseJSON extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when `DataStorage` fails to compile a data string
- *
- */
+/** Error thrown when `DataStorage` fails to compile a data string */
 class DSErrorCompileDataString extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -442,9 +392,7 @@ class DSErrorCompileDataString extends DSError {
     }
 }
 
-/** Error thrown when local last-sync parameter read fails
- *
- */
+/** Error thrown when local last-sync parameter read fails */
 class DSErrorGetLastSync extends DSError {
     /**
      * @param {string} message - message describing this error
@@ -454,9 +402,7 @@ class DSErrorGetLastSync extends DSError {
         super(message, source);
     }
 }
-/** Error thrown when local last-sync parameter write fails
- *
- */
+/** Error thrown when local last-sync parameter write fails */
 class DSErrorSetLastSync extends DSError {
     /**
      * @param {string} message - message describing this error
