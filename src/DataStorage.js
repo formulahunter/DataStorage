@@ -135,6 +135,20 @@ class DataStorage {
      * @returns {DSSyncResult}
      */
     async init() {
+        /***    TODO - CONSIDER PACKAGING ALL DATA INSTANCES ON AN OBJECT AND RETURNING THAT OBJECT; SYNC WOULD BE INITIALIZED BUT NOT `await`ED
+         * //  Synchronously read and parse local data
+         * let jdat = DataStorage.parse(await DataStorage.read(`${this.key}-data`));
+         *
+         * //  Iterate over the type container arrays in `jdat`
+         * let dataObj = {};
+         * for(let type in jdat) {...populate `dataObj` while instantiating data records...}
+         *
+         * this._sync();
+         *
+         * return dataObj;
+         *
+         */
+
         //  Synchronously read and parse local data
         let jdat = DataStorage.parse(await DataStorage.read(`${this.key}-data`));
 
