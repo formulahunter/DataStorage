@@ -56,15 +56,40 @@ class DataStorage {
         this._maxID = 0;
     }
 
-    /** Return the index of the closest-matching instance
-     *      If the exact instance is found, return its index on `index`
-     *      Else if another instance with matching ID is found, return its index on `id`
-     *      Else if another instance(s) with matching properties is found, return it(s) index in an array on `hash`
+    /** Return the closest-matching instance(s)
+     *      If the exact instance is found, return it on `record`
+     *      Else if another instance with matching ID is found, return it on `id`
+     *      Else if another instance(s) with matching properties is found, return all in an array on `hash`
      *      Else return `false`
+     *
+     * Example:
+     *
+     *      //  Search for a preexisting instance
+     *      console.debug('searching data for match: ', inst);
+     *      let match = await this.data.search(inst);
+     *      console.debug('result: ', match);
+     *
+     *      //  If the new instance has no possible matches, save it
+     *      //  Otherwise, replace the matched instance with the one already saved
+     *      if(!match) {
+     *          let result = await this.saveInstance(inst);
+     *          console.debug('');
+     *      }
+     *      else {
+     *          //  Responses here will be implementation-specific
+     *          let src;
+     *          if(match.record)
+     *              src = 'same instance';
+     *          else if(match.id)
+     *              src = 'data id';
+     *          else if(match.hash)
+     *              src = 'property values
+     *          console.info(`${ingd.name} identified as preexisting ${match.toString()}\nmatch determined by: '${src}'`);
+     *      }
      *
      * @param {DSDataRecord} inst - the data instance to search for
      *
-     * @return {Promise<{index: number}|boolean|{id: number}|{hash: number[]}|boolean>}
+     * @return {Promise<{record: DSDataRecord}|{id: DSDataRecord}|{hash: DSDataRecord[]}|boolean>}
      */
     async search(inst) {
         let container;
@@ -80,24 +105,24 @@ class DataStorage {
 
         //  Search for the exact instance
         //  Return its index on `index`
-        let findInst = container.indexOf(inst);
-        if(findInst >= 0)
-            return {index: findInst};
+        if(container.indexOf(inst) >= 0)
+            return {record: inst};   //  Return `DSDataRecord` instances, not their indices
 
         //  Search for an instance with matching ID
         //  Return its index on `id`
-        let findID = container.findIndex(el => el.id === inst.id);
+        let findID = container.find(el => el.id === inst.id);
         if(findID >= 0)
-            return {id: findID};
+            return {id: findID};    //  Return `DSDataRecord` instances, not their indices
 
-        //  Search for an instance(s) with identical properties (excluding `_created` & `_modified`)
+        //  Search for an instance(s) with identical properties
+        //  CURRENTLY INCLUDES `_created` & `_modified` PROPERTIES
         //  Return their indices on `hash`
         let hash = await DataStorage.hash(DataStorage.serialize(inst.copy().toJSON()));
         let findHash = [];
         for(let el of container) {
             let elHash = await DataStorage.hash(DataStorage.serialize(el.copy().toJSON()));
             if(elHash === hash)
-                findHash.push(container.indexOf(el));
+                findHash.push(el);  //  Return `DSDataRecord` instances, not their indices
         }
         if(findHash.length > 0)
             return {hash: findHash};
