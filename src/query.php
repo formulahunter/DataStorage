@@ -45,7 +45,8 @@ function count_nl($subject) {
 }
 
 function stdSort($a, $b) {
-    return $b->_created - $a->_created;
+    //  Return 1, 0, or -1 if `$b` is greater than, equal to, or less than `$a`, respectively
+    return ($a->_created < $b->_created) - ($a->_created > $b->_created);   //  https://stackoverflow.com/a/20460461/1657023
 }
 function add(&$container, $inst) {
     //  Insert the new instance to the end of the array
