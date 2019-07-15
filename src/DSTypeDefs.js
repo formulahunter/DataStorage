@@ -296,7 +296,7 @@ class DSSyncResult {
             if(this.succeeds)
                 str = `success at ${this.sync}`;
             else
-                str = `fail with local (${this.local ? this.local.slice(-6) : 'undefined'}), remote (${this.remote ? this.remote.slice(-6) : 'undefined'})`;
+                str = `fail with local (${this.local ? this.local.slice(0, 7) : 'undefined'}), remote (${this.remote ? this.remote.slice(0, 7) : 'undefined'})`;
 
             return `DSSyncResult{${str}}`;
         }

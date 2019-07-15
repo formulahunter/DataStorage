@@ -747,7 +747,7 @@ class DataStorage {
      *
      * @param {DSDataRecord} inst - the instance whose container is sought
      *
-     * @return {array} the respective type container
+     * @return {DSDataRecord[]} the respective type container
      *
      * @private
      */
@@ -777,7 +777,7 @@ class DataStorage {
      * [subtle-crypto digest]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
      *      "SubtleCrypto.digest() - MDN - (circa) November 25, 2018"
      *
-     * @param {string} str - The string to be hashed
+     * @param {string|object} str - The string to be hashed
      * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise<string>} Resolves to the string hash digest
@@ -786,6 +786,10 @@ class DataStorage {
         // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
 
         try {
+            //  Automatically serialize non-string arguments
+            if(typeof str !== 'string')
+                str = DataStorage.serialize(str);
+
             //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
             let buf = new TextEncoder('utf-8').encode(str);
 
