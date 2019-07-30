@@ -228,9 +228,32 @@ class DataStorage {
          * let dataObj = {};
          * for(let type in jdat) {...populate `dataObj` while instantiating data records...}
          *
-         * this._sync();
+         * let syncResult = this._sync();
+         * dataObj.sync = syncResult;
          *
          * return dataObj;
+         *
+         *
+         * *** IN IMPLEMENTING CONTEXT ******
+         *
+         * async ControlClass#init() {
+         * ...
+         * let data = this.data.init();
+         * ...
+         * [data, display] = Promise.all([data, display]);
+         * console.info('Data & display initialized');
+         * ...
+         * this.display.activate(data.type)
+         * ...
+         * await data.sync;
+         * if(!data.sync.succeeds)
+         *   throw new DataInitException
+         *
+         * console.log('Initialization successful');
+         * }
+         * ...
+         *
+         * *** END IMPLEMENTING CONTEXT *****
          *
          */
 
