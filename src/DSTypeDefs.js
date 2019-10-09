@@ -224,14 +224,16 @@ class DSReconcileResult {
 }
 
 /** Sync result summary type
- *   The `DSSyncResult` combines two "interfaces" to summarize all relevant info about a sync operation
+ *   The `DSSyncResult` combines two earlier "interfaces" to summarize all relevant info about a sync operation
  *   1. The resolved `local` and `remote` hash digests, and interface methods `get succeeds()` and `get hash()`
  *   2. The `DSReconcileResult` interface, with properties `hash` and `reconcile`
  *
  * @property {string} local - Resolved local hash digest
  * @property {string} remote - Resolved remote hash digest
  *
+ * @property {boolean} succeeds - A simple, direct indication of whether or not the sync was successful
  * @property {number} sync - The timestamp at which the sync was confirmed successful; initialized to `0`
+ * @property {string} hash - The hash digest both data stores have synced with
  * @readonly
  *
  * @property {DSReconcileResult|undefined} [reconcile] - The result returned by the server's `reconcile()` algorithm, if data has been reconciled (successful or otherwise)
