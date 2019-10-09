@@ -52,31 +52,37 @@ function replace(&$container, $newInst) {
     global $output;
 
     //  Get the index of the instance to be replaced
+    //  NOTE: the array returned by array_filter PRESERVES KEYS -- see below
     $matches = array_filter($container, function($val) use ($newInst) {
         return $val->_created === $newInst->_created;
     });
 
     LOG && $output .= '### replace()' . str_repeat(LN, 2);
-    LOG && $output .= count($matches) . ' matches found in container array  ' . LN;
+    LOG && $output .= count($matches) . ' matches found in container array  ' /*. print_r($container, true)*/ . LN;
+    LOG && $output .= 'matches: ' . print_r($matches, true);
 
     //  If zero or multiple matches, exit with error
     if(count($matches) === 0) {
         echo 'CANNOT_REPLACE_NO_MATCH';
-        die;
+        return null;    //  Return null rather than die so that log output is written to file (after switch statement in query.php
     }
     else if(count($matches) > 1) {
         echo 'CANNOT_REPLACE_MULTI_MACH';
-        die;
+        return null;    //  Return null rather than die so that log output is written to file (after switch statement in query.php
     }
 
     //  Get the index of the matched instance in the provided container array
-    $ind = array_search($matches[0], $container, true);
-    if($ind === false) {
+    //  Since array_filter() preserves keys, we can't search $container for $matches[0] because $matches[0] will likely be undefined
+    //  However, we can simply query the first "key" of $matches (there will only be one at this point, due to preceding conditionals)
+    //  PHP >= 7.3.0 includes an array_keys_first() function to get the key of the first array element
+    $ind = array_keys($matches)[0];
+    if($ind === null) {
+        LOG && $output .= 'cannot locate matched instance ' . print_r($matches[0], true) . ' in container array ' . print_r($container, true) . ' -- aborting' . LN;
         echo 'CANNOT_REPLACE_OLD_INST_NOT_FOUND';
-        die;
+        return null;    //  Return null rather than die so that log output is written to file (after switch statement in query.php)
     }
 
-    LOG && $output .= 'index of match is ' . $ind . '  ' . LN;
+    LOG && $output .= 'index of match is ' . $ind . '  ' . str_repeat(LN, 2);
 
     //  Remove the old instance and insert the new one in its place
     array_splice($container, $ind, 1, array($newInst));
