@@ -495,8 +495,7 @@ class DataStorage {
         //  If `result.succeeds` was used to evaluate success, `result.sync` was set automatically (see implementation of `DSSyncResult[get succeeds()]`)
         let time = result.sync;
         this._lastSync = time;
-        console.info('Local and remote data synchronized');
-        console.debug(`Successful sync on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
+        console.debug(`Local & remote data synchronized on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
 
         //  Disable any changes to `result` and return it
         Object.freeze(result);
