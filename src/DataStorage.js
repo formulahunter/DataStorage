@@ -44,6 +44,7 @@ class DataStorage {
         for(let cls of types) {
             this._types.set(cls, []);
             this._deleted.set(cls, []);
+            DataStorage[cls.name] = cls;
         }
 
         /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
@@ -53,6 +54,90 @@ class DataStorage {
          * @private
          */
         this._maxID = 0;
+    }
+
+    /** Return the closest-matching instance(s)
+     *      If the exact instance is found, return it on `record`
+     *      Else if another instance with matching ID is found, return it on `id`
+     *      Else if another instance(s) with matching properties is found, return all in an array on `hash`
+     *      Else return `false`
+     *
+     * Example:
+     *
+     *      //  Search for a preexisting instance
+     *      console.debug('searching data for match: ', inst);
+     *      let match = await this.data.search(inst);
+     *      console.debug('result: ', match);
+     *
+     *      //  If the new instance has no possible matches, save it
+     *      //  Otherwise, replace the matched instance with the one already saved
+     *      if(!match) {
+     *          let result = await this.saveInstance(inst);
+     *          console.debug('');
+     *      }
+     *      else {
+     *          //  Responses here will be implementation-specific
+     *          let src;
+     *          if(match.record)
+     *              src = 'same instance';
+     *          else if(match.id)
+     *              src = 'data id';
+     *          else if(match.hash)
+     *              src = 'property values
+     *          console.info(`${ingd.name} identified as preexisting ${match.toString()}\nmatch determined by: '${src}'`);
+     *      }
+     *
+     * @param {DSDataRecord} inst - the data instance to search for
+     *
+     * @return {Promise<{record: DSDataRecord}|{id: DSDataRecord}|{hash: DSDataRecord[]}|boolean>}
+     */
+    async search(inst) {
+        let container;
+        try {
+            container = this._getContainer(inst);
+        }
+        catch(er) {
+            if(er instanceof DSErrorInvalidType)
+                throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
+
+            throw new DSErrorSearch(`Search for instance with ID ${inst.id} failed`, er);
+        }
+
+        //  Search for the exact instance
+        //  Return its index on `index`
+        if(container.indexOf(inst) >= 0)
+            return {record: inst};   //  Return `DSDataRecord` instances, not their indices
+
+        //  Search for an instance with matching ID
+        //  Return its index on `id`
+        let findID = container.find(el => el.id === inst.id);
+        if(findID >= 0)
+            return {id: findID};    //  Return `DSDataRecord` instances, not their indices
+
+        //  Search for an instance(s) with identical properties
+        //  CURRENTLY INCLUDES `_created` & `_modified` PROPERTIES
+        //  Return their indices on `hash`
+        let hash = await DataStorage.hash(DataStorage.serialize(inst.copy().toJSON()));
+        let findHash = [];
+        for(let el of container) {
+            let elHash = await DataStorage.hash(DataStorage.serialize(el.copy().toJSON()));
+            if(elHash === hash)
+                findHash.push(el);  //  Return `DSDataRecord` instances, not their indices
+        }
+        if(findHash.length > 0)
+            return {hash: findHash};
+
+        //  Return false
+        return false;
+    }
+    getID(id, type) {
+        if(!(id instanceof Number || typeof id == 'number'))
+            throw new TypeError(`Cannot get data record with non-numeric type ${id}`);
+        if(DataStorage[type.name] !== type)
+            throw new DSErrorInvalidType(`Cannot get data record with unrecognized type ${type.name}`, type);
+
+        let container = this._types.get(type);
+        return container.find(el => el._created === id);
     }
 
 
@@ -83,7 +168,7 @@ class DataStorage {
     }
     /** Set timestamp of the most recent successful sync
      *
-     * @param {number} sync - the timestamp at which the successful sync ccurred
+     * @param {number} sync - the timestamp at which the successful sync occurred
      *
      * @private
      */
@@ -143,9 +228,32 @@ class DataStorage {
          * let dataObj = {};
          * for(let type in jdat) {...populate `dataObj` while instantiating data records...}
          *
-         * this._sync();
+         * let syncResult = this._sync();
+         * dataObj.sync = syncResult;
          *
          * return dataObj;
+         *
+         *
+         * *** IN IMPLEMENTING CONTEXT ******
+         *
+         * async ControlClass#init() {
+         * ...
+         * let data = this.data.init();
+         * ...
+         * [data, display] = Promise.all([data, display]);
+         * console.info('Data & display initialized');
+         * ...
+         * this.display.activate(data.type)
+         * ...
+         * await data.sync;
+         * if(!data.sync.succeeds)
+         *   throw new DataInitException
+         *
+         * console.log('Initialization successful');
+         * }
+         * ...
+         *
+         * *** END IMPLEMENTING CONTEXT *****
          *
          */
 
@@ -158,7 +266,7 @@ class DataStorage {
                 continue;
 
             //  Designate the associated class object for each type
-            let classObj = window[type];
+            let classObj = DataStorage[type];
 
             //  Iterate through elements in each type container array
             for(let jobj of jdat[type]) {
@@ -387,8 +495,7 @@ class DataStorage {
         //  If `result.succeeds` was used to evaluate success, `result.sync` was set automatically (see implementation of `DSSyncResult[get succeeds()]`)
         let time = result.sync;
         this._lastSync = time;
-        console.info('Local and remote data synchronized');
-        console.debug(`Successful sync on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
+        console.debug(`Local & remote data synchronized on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
 
         //  Disable any changes to `result` and return it
         Object.freeze(result);
@@ -480,7 +587,7 @@ class DataStorage {
             //  Designate the associated class object, data container, and local container for each type
             //  `dataContainer` is the `DataStorage` instance's container for the designated data type
             //  `localContainer` is the JSON data container object defined in the server's response
-            let classObj = window[type];
+            let classObj = DataStorage[type];
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
@@ -658,6 +765,24 @@ class DataStorage {
         return ind;
     }
 
+    /** Gets the container array for a provided `DSDataRecord`
+     *
+     * @param {DSDataRecord} inst - the instance whose container is sought
+     *
+     * @return {DSDataRecord[]} the respective type container
+     *
+     * @private
+     */
+    _getContainer(inst) {
+        //  Validate type against managed types
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        if(container === undefined)
+            throw new DSErrorInvalidType(`Cannot get container of unrecognized type ${type.name} -- no container defined`, type);
+
+        return container;
+    }
+
     /** ##SECTION - Compute cryptographic hash digests
      *
      *  static async hash()
@@ -674,7 +799,7 @@ class DataStorage {
      * [subtle-crypto digest]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
      *      "SubtleCrypto.digest() - MDN - (circa) November 25, 2018"
      *
-     * @param {string} str - The string to be hashed
+     * @param {string|object} str - The data to be hashed
      * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise<string>} Resolves to the string hash digest
@@ -683,6 +808,10 @@ class DataStorage {
         // console.debug(`Compute hash digest of ${typeof str === 'string' ? `string (length ${str.length})` : `${typeof str}`} using ${alg} algorithm\nvalue: ${str}`);
 
         try {
+            //  Automatically serialize non-string arguments
+            if(typeof str !== 'string')
+                str = DataStorage.serialize(str);
+
             //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
             let buf = new TextEncoder('utf-8').encode(str);
 
@@ -723,8 +852,6 @@ class DataStorage {
      * @param {string} key
      *
      * @returns {PromiseLike<(string|null)>}
-     *
-     * TODO Implement server data loading when no local data found
      */
     static async read(key) {
         try {
@@ -795,7 +922,7 @@ class DataStorage {
     /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
      *
      * @param {string} url - The URL of the request target file
-     * @param {object.<string, string>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
      * @returns {PromiseLike<string>} Resolves to the value of the server response
      *
@@ -854,9 +981,9 @@ class DataStorage {
 
     /** Dispatch XMLHttpRequests with the POST method to a given URL with specified data and optional headers
      *
-     * @param {(object|string)} data - The data object to be serialized and sent as the request body
+     * @param {object|string} data - The data object to be serialized and sent as the request body
      * @param {string} url - The URL of the request target file
-     * @param {object.<string, string>[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
      *
      * @returns {PromiseLike<string>} Resolves to the value of the server response
      *

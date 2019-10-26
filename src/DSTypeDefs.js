@@ -1,3 +1,11 @@
+/** Request header object type
+ * @typedef {object} XHRHeader
+ *
+ * @property {string} header - the HTTP header to be set
+ * @property {string} value - the value to be set for the indicated header
+ */
+
+
 /** Timestamp type
  *   Integer greater than (not equal to) 0
  * typedef {number<int[!0, >]} DSTimestamp   //  #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing integer type with range constraint ('!' indicates exclusive bound, i.e. value cannot be equal to 0)
@@ -38,8 +46,8 @@ Object.freeze(DSDataActivityRank);
 /** Abstract data instance superclass
  * @since March 10, 2019
  *
- * @extends DSDataJSONRecord
- * @abstract
+ * @template D
+ * @extends {DSDataJSONRecord}
  */
 class DSDataRecord {
     constructor() {
@@ -62,10 +70,12 @@ class DSDataRecord {
      *    **Note the use of `new this()`**
      *    This statement constructs a new instance of a subclass invoking `DSDataRecord.fromJSON()` with the `super` keyword
      *    As `fromJSON()` is a `static` method, the `this` keyword refers to the class object/constructor function itself
+     *    Subclasses must implement this method and instantiate their return instance using `super.fromJSON()`
      *
-     * @param {DSDataJSONRecord} jobj - The raw JSON object literal
+     * @template D
+     * @param {DSDataJSONRecord<D>} jobj - The raw JSON object literal
      *
-     * @returns {DSDataRecord} Initialized data instance
+     * @returns {D}
      */
     static fromJSON(jobj) {
         if(jobj instanceof String || typeof jobj === 'string')
@@ -74,8 +84,7 @@ class DSDataRecord {
         let inst = new this();
 
         inst._created = jobj._created;
-        if(jobj._modified)
-            inst._modified = jobj._modified;
+        inst._modified = jobj._modified || 0;
 
         return inst;
     }
@@ -91,9 +100,30 @@ class DSDataRecord {
         return this._created;
     }
 
-    /** Get the JSON object literal representation of the data instance
+    /** Return a new instance whose properties values are identical to the current instance
+     *      **EXCLUDES** the `_created` and `_modified` properties unless `id` argument is `true`
+     *      Subclasses must implement this method and instantiate their return instance using `super.copy()`
      *
-     * @returns {DSDataJSONRecord}
+     * @template D
+     * @param {boolean} [id=false] - if `true`, the instance's _created` and `_modified` properties are also copied; defaults to `false`
+     *
+     * @returns {D}
+     */
+    copy(id = false) {
+        let copy = new this.constructor();
+        if(id === true) {
+            copy._created = this._created;
+            copy._modified = this._modified;
+        }
+
+        return copy;
+    }
+
+    /** Get the JSON object literal representation of the data instance
+     *    Subclasses must implement this method and initiate their return value using `super.toJSON()`
+     *
+     * @template D
+     * @returns {DSDataJSONRecord<D>}
      */
     toJSON() {
         let jobj = {
@@ -107,6 +137,7 @@ class DSDataRecord {
 
     /** Get a human-readable string representation of the data instance, e.g. for console output
      *    Formatted to print the class name and ID
+     *    Subclasses must override this method
      *
      * @returns {string}
      */
@@ -193,14 +224,16 @@ class DSReconcileResult {
 }
 
 /** Sync result summary type
- *   The `DSSyncResult` combines two "interfaces" to summarize all relevant info about a sync operation
+ *   The `DSSyncResult` combines two earlier "interfaces" to summarize all relevant info about a sync operation
  *   1. The resolved `local` and `remote` hash digests, and interface methods `get succeeds()` and `get hash()`
  *   2. The `DSReconcileResult` interface, with properties `hash` and `reconcile`
  *
  * @property {string} local - Resolved local hash digest
  * @property {string} remote - Resolved remote hash digest
  *
+ * @property {boolean} succeeds - A simple, direct indication of whether or not the sync was successful
  * @property {number} sync - The timestamp at which the sync was confirmed successful; initialized to `0`
+ * @property {string} hash - The hash digest both data stores have synced with
  * @readonly
  *
  * @property {DSReconcileResult|undefined} [reconcile] - The result returned by the server's `reconcile()` algorithm, if data has been reconciled (successful or otherwise)
@@ -265,7 +298,7 @@ class DSSyncResult {
             if(this.succeeds)
                 str = `success at ${this.sync}`;
             else
-                str = `fail with local (${this.local ? this.local.slice(-6) : 'undefined'}), remote (${this.remote ? this.remote.slice(-6) : 'undefined'})`;
+                str = `fail with local (${this.local ? this.local.slice(0, 7) : 'undefined'}), remote (${this.remote ? this.remote.slice(0, 7) : 'undefined'})`;
 
             return `DSSyncResult{${str}}`;
         }
