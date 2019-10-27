@@ -3,7 +3,11 @@
  *  @since March 3, 2019
  */
 
-/** The `DataStorage` class provides an abstract interface to an advanced data storage pattern designed to be both fast and robust
+/** Server query file directory relative to page that loads `DataStorage` */
+const QUERY_DIR = '';
+
+/** The `DataStorage` class provides an abstract interface to an advanced
+ *  data storage pattern designed to be both fast and robust
  *
  * @since November 25, 2019
  */
@@ -325,7 +329,7 @@ class DataStorage {
             type: inst.constructor.name,
             instance: inst
         };
-        let url = 'query.php';
+        let url = QUERY_DIR + 'query.php';
         let headers = [{
             header: 'content-type',
             value: 'application/json;charset=UTF-8'
@@ -389,7 +393,7 @@ class DataStorage {
                 type: inst.constructor.name,
                 instance: inst
             };
-            let url = 'query.php';
+            let url = QUERY_DIR + 'query.php';
             let headers = [{
                 header: 'content-type',
                 value: 'application/json;charset=UTF-8'
@@ -457,7 +461,7 @@ class DataStorage {
         //  Fetch remote server hash asynchronously (if necessary)
         if(!remote) {
             let data = {query: 'hash'};
-            let url = 'query.php';
+            let url = QUERY_DIR + 'query.php';
             let headers = [{
                 header: 'content-type',
                 value: 'application/json;charset=UTF-8'
@@ -570,7 +574,7 @@ class DataStorage {
                     instances: instances
             }
         };
-        let url = 'query.php';
+        let url = QUERY_DIR + 'query.php';
         let headers = [{
             header: 'content-type',
             value: 'application/json;charset=UTF-8'
