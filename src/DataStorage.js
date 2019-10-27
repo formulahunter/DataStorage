@@ -65,92 +65,6 @@ class DataStorage {
         this._maxID = 0;
     }
 
-    /** Return the closest-matching instance(s)
-     *  If the exact instance is found, return it on `record`
-     *  Else if another instance with matching ID is found, return it on `id`
-     *  Else if another instance(s) with matching properties is found, return
-     *  all in an array on `hash`
-     *  Else return `false`
-     *
-     * Example:
-     *
-     *      //  Search for a preexisting instance
-     *      console.debug('searching data for match: ', inst);
-     *      let match = await this.data.search(inst);
-     *      console.debug('result: ', match);
-     *
-     *      //  If the new instance has no possible matches, save it
-     *      //  Otherwise, replace the matched instance with the one already
-     *      //  saved
-     *      if(!match) {
-     *          let result = await this.saveInstance(inst);
-     *          console.debug('');
-     *      }
-     *      else {
-     *          //  Responses here will be implementation-specific
-     *          let src;
-     *          if(match.record)
-     *              src = 'same instance';
-     *          else if(match.id)
-     *              src = 'data id';
-     *          else if(match.hash)
-     *              src = 'property values
-     *          console.info(`${ingd.name} identified as preexisting ${match.toString()}\nmatch determined by: '${src}'`);
-     *      }
-     *
-     * @param {DSDataRecord} inst - the data instance to search for
-     *
-     * @return {Promise<{record: DSDataRecord}|{id: DSDataRecord}|{hash: DSDataRecord[]}|boolean>}
-     */
-    async search(inst) {
-        let container;
-        try {
-            container = this._getContainer(inst);
-        }
-        catch(er) {
-            if(er instanceof DSErrorInvalidType)
-                throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
-
-            throw new DSErrorSearch(`Search for instance with ID ${inst.id} failed`, er);
-        }
-
-        //  Search for the exact instance
-        //  Return its index on `index`
-        if(container.indexOf(inst) >= 0)
-            return {record: inst};   //  Return `DSDataRecord` instances, not their indices
-
-        //  Search for an instance with matching ID
-        //  Return its index on `id`
-        let findID = container.find(el => el.id === inst.id);
-        if(findID >= 0)
-            return {id: findID};    //  Return `DSDataRecord` instances, not their indices
-
-        //  Search for an instance(s) with identical properties
-        //  CURRENTLY INCLUDES `_created` & `_modified` PROPERTIES
-        //  Return their indices on `hash`
-        let hash = await DataStorage.hash(DataStorage.serialize(inst.copy().toJSON()));
-        let findHash = [];
-        for(let el of container) {
-            let elHash = await DataStorage.hash(DataStorage.serialize(el.copy().toJSON()));
-            if(elHash === hash)
-                findHash.push(el);  //  Return `DSDataRecord` instances, not their indices
-        }
-        if(findHash.length > 0)
-            return {hash: findHash};
-
-        //  Return false
-        return false;
-    }
-    getID(id, type) {
-        if(!(id instanceof Number || typeof id == 'number'))
-            throw new TypeError(`Cannot get data record with non-numeric type ${id}`);
-        if(DataStorage[type.name] !== type)
-            throw new DSErrorInvalidType(`Cannot get data record with unrecognized type ${type.name}`, type);
-
-        let container = this._types.get(type);
-        return container.find(el => el._created === id);
-    }
-
 
     /** ##SECTION - Maintain last-sync parameter
      *
@@ -314,6 +228,9 @@ class DataStorage {
 
     /** ##SECTION - Incremental data manipulation
      *
+     *  save()
+     *  edit()
+     *  delete()
      */
 
     /** Save *new* data instance
@@ -444,6 +361,119 @@ class DataStorage {
      * @returns {Promise<DSSyncResult>}
      */
     delete(inst) {}
+
+
+    /** ##SECTION - Search for a match of a given data instance among
+     *  existing records
+     *
+     *   search()
+     *   getID()
+     *   _getContainer()
+     */
+
+    /** Return the closest-matching instance(s)
+     *  If the exact instance is found, return it on `record`
+     *  Else if another instance with matching ID is found, return it on `id`
+     *  Else if another instance(s) with matching properties is found, return
+     *  all in an array on `hash`
+     *  Else return `false`
+     *
+     * Example:
+     *
+     *      //  Search for a preexisting instance
+     *      console.debug('searching data for match: ', inst);
+     *      let match = await this.data.search(inst);
+     *      console.debug('result: ', match);
+     *
+     *      //  If the new instance has no possible matches, save it
+     *      //  Otherwise, replace the matched instance with the one already
+     *      //  saved
+     *      if(!match) {
+     *          let result = await this.saveInstance(inst);
+     *          console.debug('');
+     *      }
+     *      else {
+     *          //  Responses here will be implementation-specific
+     *          let src;
+     *          if(match.record)
+     *              src = 'same instance';
+     *          else if(match.id)
+     *              src = 'data id';
+     *          else if(match.hash)
+     *              src = 'property values
+     *          console.info(`${ingd.name} identified as preexisting ${match.toString()}\nmatch determined by: '${src}'`);
+     *      }
+     *
+     * @param {DSDataRecord} inst - the data instance to search for
+     *
+     * @return {Promise<{record: DSDataRecord}|{id: DSDataRecord}|{hash: DSDataRecord[]}|boolean>}
+     */
+    async search(inst) {
+        let container;
+        try {
+            container = this._getContainer(inst);
+        }
+        catch(er) {
+            if(er instanceof DSErrorInvalidType)
+                throw new DSErrorSearchInvalidType(`Cannot locate ${inst} of invalid type ${inst.constructor}`, er);
+
+            throw new DSErrorSearch(`Search for instance with ID ${inst.id} failed`, er);
+        }
+
+        //  Search for the exact instance
+        //  Return its index on `index`
+        if(container.indexOf(inst) >= 0)
+            return {record: inst};   //  Return `DSDataRecord` instances, not their indices
+
+        //  Search for an instance with matching ID
+        //  Return its index on `id`
+        let findID = container.find(el => el.id === inst.id);
+        if(findID >= 0)
+            return {id: findID};    //  Return `DSDataRecord` instances, not their indices
+
+        //  Search for an instance(s) with identical properties
+        //  CURRENTLY INCLUDES `_created` & `_modified` PROPERTIES
+        //  Return their indices on `hash`
+        let hash = await DataStorage.hash(DataStorage.serialize(inst.copy().toJSON()));
+        let findHash = [];
+        for(let el of container) {
+            let elHash = await DataStorage.hash(DataStorage.serialize(el.copy().toJSON()));
+            if(elHash === hash)
+                findHash.push(el);  //  Return `DSDataRecord` instances, not their indices
+        }
+        if(findHash.length > 0)
+            return {hash: findHash};
+
+        //  Return false
+        return false;
+    }
+    getID(id, type) {
+        if(!(id instanceof Number || typeof id == 'number'))
+            throw new TypeError(`Cannot get data record with non-numeric type ${id}`);
+        if(DataStorage[type.name] !== type)
+            throw new DSErrorInvalidType(`Cannot get data record with unrecognized type ${type.name}`, type);
+
+        let container = this._types.get(type);
+        return container.find(el => el._created === id);
+    }
+
+    /** Gets the container array for a provided `DSDataRecord`
+     *
+     * @param {DSDataRecord} inst - the instance whose container is sought
+     *
+     * @return {DSDataRecord[]} the respective type container
+     *
+     * @private
+     */
+    _getContainer(inst) {
+        //  Validate type against managed types
+        let type = inst.constructor;
+        let container = this._types.get(type);
+        if(container === undefined)
+            throw new DSErrorInvalidType(`Cannot get container of unrecognized type ${type.name} -- no container defined`, type);
+
+        return container;
+    }
 
 
     /** ##SECTION - Sync local storage with remote data file
@@ -813,28 +843,10 @@ class DataStorage {
         return ind;
     }
 
-    /** Gets the container array for a provided `DSDataRecord`
-     *
-     * @param {DSDataRecord} inst - the instance whose container is sought
-     *
-     * @return {DSDataRecord[]} the respective type container
-     *
-     * @private
-     */
-    _getContainer(inst) {
-        //  Validate type against managed types
-        let type = inst.constructor;
-        let container = this._types.get(type);
-        if(container === undefined)
-            throw new DSErrorInvalidType(`Cannot get container of unrecognized type ${type.name} -- no container defined`, type);
-
-        return container;
-    }
-
     /** ##SECTION - Compute cryptographic hash digests
      *
      *  static async hash()
-     *  static async _dataString()
+     *  static async _hash()
      */
 
     /** Initiate hash digest of string values
