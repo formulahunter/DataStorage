@@ -12,9 +12,11 @@ const QUERY_DIR = '';
  * @since November 25, 2019
  */
 class DataStorage {
-    /**
+    /** Constructor function
      * @param {string} key - The key to be used for storing data in localStorage
-     * @param {DSDataRecordClass[]} types - The class objects (constructor functions) of each data type to be managed by this `DataStorage` instance
+     * @param {DSDataRecordClass[]} types - The class objects (constructor
+     *        functions) of each data type to be managed by this `DataStorage`
+     *        instance
      */
     constructor(key, types) {
         if(!(key instanceof String || typeof key === 'string'))
@@ -24,8 +26,10 @@ class DataStorage {
             throw new TypeError(`DataStorage constructor expects an array 'types' argument but received ${types}`);
 
         /** Key on which all local data is stored
-         *    Data in local storage may be grouped by appending suffixes to this key
-         *    Once deployed to production, extensive preparation will be required if this key is to be changed
+         *  Data in local storage may be grouped by appending suffixes to this
+         *  key
+         *  Once deployed to production, extensive preparation will be
+         *  required if this key is to be changed
          *
          * @property {string} key
          */
@@ -51,7 +55,8 @@ class DataStorage {
             DataStorage[cls.name] = cls;
         }
 
-        /** The greatest ID assigned to any data instance, for ensuring all data instances are assigned unique ID's during batch save processes
+        /** The greatest ID assigned to any data instance, for ensuring all data
+         *  instances are assigned unique ID's during batch save processes
          *
          * @property {number} _maxID
          *
@@ -61,10 +66,11 @@ class DataStorage {
     }
 
     /** Return the closest-matching instance(s)
-     *      If the exact instance is found, return it on `record`
-     *      Else if another instance with matching ID is found, return it on `id`
-     *      Else if another instance(s) with matching properties is found, return all in an array on `hash`
-     *      Else return `false`
+     *  If the exact instance is found, return it on `record`
+     *  Else if another instance with matching ID is found, return it on `id`
+     *  Else if another instance(s) with matching properties is found, return
+     *  all in an array on `hash`
+     *  Else return `false`
      *
      * Example:
      *
@@ -74,7 +80,8 @@ class DataStorage {
      *      console.debug('result: ', match);
      *
      *      //  If the new instance has no possible matches, save it
-     *      //  Otherwise, replace the matched instance with the one already saved
+     *      //  Otherwise, replace the matched instance with the one already
+     *      //  saved
      *      if(!match) {
      *          let result = await this.saveInstance(inst);
      *          console.debug('');
@@ -152,9 +159,10 @@ class DataStorage {
      */
 
     /** Get timestamp of the most recent successful sync
-     *    Returns 0 if `{this.key}-sync` does not exist in local storage
+     *  Returns 0 if `{this.key}-sync` does not exist in local storage
      *
-     * @returns {number} The timestamp of the most recent successful sync, or 0 if parameter not found in local storage
+     * @returns {number} The timestamp of the most recent successful sync, or 0
+     *          if parameter not found in local storage
      *
      * @private
      */
@@ -172,7 +180,8 @@ class DataStorage {
     }
     /** Set timestamp of the most recent successful sync
      *
-     * @param {number} sync - the timestamp at which the successful sync occurred
+     * @param {number} sync - the timestamp at which the successful sync
+     *        occurred
      *
      * @private
      */
@@ -198,9 +207,12 @@ class DataStorage {
      *  private get _newID()
      */
 
-    /** Ensure that no two data instances are assigned the same id during batch saves
+    /** Ensure that no two data instances are assigned the same id during batch
+     *  saves
      *
-     * @returns {number} The smallest integer greater than or equal to the current timestamp which has not already been assigned as an ID to another data instance
+     * @returns {number} The smallest integer greater than or equal to the
+     *          current timestamp which has not already been assigned as an ID
+     *          to another data instance
      *
      * @private
      * @readonly
@@ -224,7 +236,8 @@ class DataStorage {
      * @returns {DSSyncResult}
      */
     async init() {
-        /***    TODO - CONSIDER PACKAGING ALL DATA INSTANCES ON AN OBJECT AND RETURNING THAT OBJECT; SYNC WOULD BE INITIALIZED BUT NOT `await`ED
+        /***    TODO - CONSIDER PACKAGING ALL DATA INSTANCES ON AN OBJECT AND
+         *  RETURNING THAT OBJECT; SYNC WOULD BE INITIALIZED BUT NOT `await`ED
          * //  Synchronously read and parse local data
          * let jdat = DataStorage.parse(await DataStorage.read(`${this.key}-data`));
          *
@@ -274,7 +287,8 @@ class DataStorage {
 
             //  Iterate through elements in each type container array
             for(let jobj of jdat[type]) {
-                //  Construct a new instance of `classObj` and assign its `_created` property
+                //  Construct a new instance of `classObj` and assign its
+                //  `_created` property
                 let inst = classObj.fromJSON(jobj);
 
                 //  Add the new instance to the respective container array
@@ -282,9 +296,12 @@ class DataStorage {
             }
         }
 
-        //  `await` must be used with this call within an immediate `try..catch()` block to properly capture/log `DSError` instances
+        //  `await` must be used with this call within an immediate
+        //  `try..catch()` block to properly capture/log `DSError` instances
         //  Not sure why
-        //  Possibly to pause execution here and submit thrown errors to the catch() block, rather than return execution to the calling context and risk uncaught exceptions?
+        //  Possibly to pause execution here and submit thrown errors to the
+        //  catch() block, rather than return execution to the calling
+        //  context and risk uncaught exceptions?
         try {
             return await this._sync();
         }
@@ -300,6 +317,7 @@ class DataStorage {
      */
 
     /** Save *new* data instance
+     *
      * @param {DSDataRecord} inst - The data instance to be saved
      *
      * @returns {Promise<DSSyncResult>}
@@ -350,7 +368,8 @@ class DataStorage {
     }
 
     /** Edit existing data instance
-     *      This method replaces an existing data instance with the new version provided
+     *  This method replaces an existing data instance with the new version
+     *  provided
      *
      * @param {DSDataRecord} inst - The NEW version of the instance
      *
@@ -419,6 +438,7 @@ class DataStorage {
     }
 
     /** Delete data instance
+     *
      * @param {DSDataRecord} inst
      *
      * @returns {Promise<DSSyncResult>}
@@ -435,11 +455,11 @@ class DataStorage {
      */
 
     /** Initialize sync-reconcile procedure
-     *    Compare hash digests from both sources
-     *    Initiate reconciliation if digests don't match
+     *  Compare hash digests from both sources
+     *  Initiate reconciliation if digests don't match
      *
-     *    On success, return a Promise resolving to an object summarizing the sync
-     *    On failure throws an exception
+     *  On success, return a Promise resolving to an object summarizing the sync
+     *  On failure throws an exception
      *
      * @param {(string|PromiseLike<string>)} [local]
      * @param {(string|PromiseLike<string>)} [remote]
@@ -452,9 +472,12 @@ class DataStorage {
         /*  Failure modes
          *  -------------
          *
-         *  1. `lastSync` not updated despite matching records in both repositories
-         *      1. Data instance(s) not recorded or recorded in duplicate in either repository
-         *  2. Data instances recorded with different/invalid data types in one or both repositories
+         *  1. `lastSync` not updated despite matching records in both
+         *     repositories
+         *      1. Data instance(s) not recorded or recorded in duplicate in
+         *         either repository
+         *  2. Data instances recorded with different/invalid data types in one
+         *     or both repositories
          *
          */
 
@@ -473,12 +496,14 @@ class DataStorage {
         if(!local)
             local = this._hash();
 
-        //  `await` both asynchronous requests and construct a `DSSyncResult` with the resolved values
+        //  `await` both asynchronous requests and construct a `DSSyncResult`
+        //  with the resolved values
         //  Assign both resolved values to local variables
         [local, remote] = await Promise.all([local, remote]);
         let result = new DSSyncResult(local, remote);
 
-        //  If the initial comparison fails, initiate the reconciliation procedure
+        //  If the initial comparison fails, initiate the reconciliation
+        //  procedure
         if(!result.succeeds) {
             console.log('Attempting to reconcile local and remote data');
 
@@ -490,13 +515,18 @@ class DataStorage {
             if(!result.succeeds)
                 throw new DSErrorSyncFail('Failed to synchronize local and remote data', result.toString());
 
-            //  Overwrite local storage with successfully reconciled data in memory
-            //  `await` this call only in case a subsequent method (after `_sync()`) attempts to access local storage
+            //  Overwrite local storage with successfully reconciled data in
+            //  memory
+            //  `await` this call only in case a subsequent method (after
+            //  `_sync()`) attempts to access local storage
             await DataStorage.write(`${this.key}-data`, this._dataString);
         }
 
-        //  At this point, either sync, reconciliation, or resolution must have succeeded
-        //  If `result.succeeds` was used to evaluate success, `result.sync` was set automatically (see implementation of `DSSyncResult[get succeeds()]`)
+        //  At this point, either sync, reconciliation, or resolution must have
+        //  succeeded
+        //  If `result.succeeds` was used to evaluate success, `result.sync` was
+        //  set automatically (see implementation of
+        //  `DSSyncResult[get succeeds()]`)
         let time = result.sync;
         this._lastSync = time;
         console.debug(`Local & remote data synchronized on ${(new Date(time)).toLocaleString()}\nTimestamp: ${time}`);
@@ -507,12 +537,14 @@ class DataStorage {
     }
 
     /** Reconcile discrepancies
-     *    Aggregate all data activity since last sync
-     *    Send to server's reconciliation script
-     *    Process result by updating local data cache
-     *    Pass any conflicts along to `_reconcile()`
+     *  Aggregate all data activity since last sync
+     *  Send to server's reconciliation script
+     *  Process result by updating local data cache
+     *  Pass any conflicts along to `_reconcile()`
      *
-     * @param {DSSyncResult} sync - The sync result originally constructed in `_sync()`, passed so that its `remote` property can be updated with the new server hash
+     * @param {DSSyncResult} sync - The sync result originally constructed in
+     *        `_sync()`, passed so that its `remote` property can be updated
+     *        with the new server hash
      *
      * @returns {Promise<DSReconcileResult>}
      *
@@ -524,8 +556,10 @@ class DataStorage {
         let instances = {};
         for(let type of this._types.keys()) {
             //  Associate data instances with the key they are defined on
-            //  Organization of data in the remote repository depends on this association
-            //  Object literals are used as associative arrays to simplify some server-side `reconcile()` operations
+            //  Organization of data in the remote repository depends on this
+            //  association
+            //  Object literals are used as associative arrays to simplify some
+            //  server-side `reconcile()` operations
             //    - Refer to `DSDataTypeIndex` type definition
             let key = type.name;
             instances[key] = {
@@ -588,19 +622,24 @@ class DataStorage {
             if(!result.data.hasOwnProperty(type))
                 continue;
 
-            //  Designate the associated class object, data container, and local container for each type
-            //  `dataContainer` is the `DataStorage` instance's container for the designated data type
-            //  `localContainer` is the JSON data container object defined in the server's response
+            //  Designate the associated class object, data container, and local
+            //  container for each type
+            //  `dataContainer` is the `DataStorage` instance's container for
+            //  the designated data type
+            //  `localContainer` is the JSON data container object defined in
+            //  the server's response
             let classObj = DataStorage[type];
             let dataContainer = this._types.get(classObj);
             let localContainer = result.data[type];
 
-            //  Add new data instances, replace modified ones, and remove deleted ones
+            //  Add new data instances, replace modified ones, and remove
+            //  deleted ones
             for(let id in localContainer.new) {
                 if(!localContainer.new.hasOwnProperty(id))
                     continue;
 
-                //  Define a new instance of `classObj` using property values on `jobj`
+                //  Define a new instance of `classObj` using property values on
+                //  `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
                 //  Add the new instance to its respective container array
@@ -610,10 +649,12 @@ class DataStorage {
                 if(!localContainer.modified.hasOwnProperty(id))
                     continue;
 
-                //  Define a new instance of `classObj` using property values on `jobj`
+                //  Define a new instance of `classObj` using property values on
+                //  `jobj`
                 let inst = classObj.fromJSON(localContainer.new[id]);
 
-                //  Replace the corresponding instance in the associated type container
+                //  Replace the corresponding instance in the associated type
+                //  container
                 this._replace(inst);
             }
             for(let id in localContainer.deleted) {
@@ -660,7 +701,7 @@ class DataStorage {
 
 
     /** Add data instance to respective container
-     *      Maintain proper sort order and `_maxID`
+     *  Maintain proper sort order and `_maxID`
      *
      *  @param {DSDataRecord} inst
      *
@@ -677,7 +718,8 @@ class DataStorage {
         if(container === undefined)
             throw new DSErrorAddInvalidType(`Cannot add unrecognized data type ${type.name} -- no container defined`, type);
 
-        //  Check that the instance has not already been added to the container and that no ID conflicts exist
+        //  Check that the instance has not already been added to the container
+        //  and that no ID conflicts exist
         //  `push()` the new instance to the container
         let exInd = container.indexOf(inst);
         let idConflict = container.find(el => el.id === inst.id);
@@ -730,8 +772,9 @@ class DataStorage {
     }
 
     /** Remove an existing data instance
-     *      Adds identifying information to the respective `_deleted` container by default
-     *      Can be overridden by passing `false` as the second argument
+     *  Adds identifying information to the respective `_deleted` container by
+     *  default
+     *  Can be overridden by passing `false` as the second argument
      *
      * @param {DSDataRecord} inst
      * @param {boolean} [del=true]
@@ -753,7 +796,8 @@ class DataStorage {
 
         //  Add identifying data to the appropriate deleted container
         if(del) {
-            //  Get the associated 'deleted' container array and check for ID conflicts
+            //  Get the associated 'deleted' container array and check for ID
+            //  conflicts
             let container = this._deleted.get(type);
             let existing = container.find(el => el.id === inst.id);
             if(existing)
@@ -794,17 +838,19 @@ class DataStorage {
      */
 
     /** Initiate hash digest of string values
-     *    Implemented to allow static `_write()` method to return hash digest
-     *    String to be hashed **must** be provided
-     *    Hash algorithm may be specified; defaults to SHA-256
+     *  Implemented to allow static `_write()` method to return hash digest
+     *  String to be hashed **must** be provided
+     *  Hash algorithm may be specified; defaults to SHA-256
      *
-     *    Adopted from [MDN SubtleCrypto.digest() reference][subtle-crypto digest]
+     *  Adopted from
+     *  [MDN SubtleCrypto.digest() reference][subtle-crypto digest]
      *
      * [subtle-crypto digest]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest#Example
      *      "SubtleCrypto.digest() - MDN - (circa) November 25, 2018"
      *
      * @param {string|object} str - The data to be hashed
-     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see
+     *        https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {Promise<string>} Resolves to the string hash digest
      */
@@ -816,7 +862,8 @@ class DataStorage {
             if(typeof str !== 'string')
                 str = DataStorage.serialize(str);
 
-            //  SubtleCrypto.digest() returns a Promise, so this function needs only to return that promise
+            //  SubtleCrypto.digest() returns a Promise, so this function needs
+            //  only to return that promise
             let buf = new TextEncoder('utf-8').encode(str);
 
             let digest = await window.crypto.subtle.digest(algo, buf);
@@ -830,10 +877,12 @@ class DataStorage {
         }
     }
     /** Private instance implementation of hash digest
-     *    Implemented to allow other instance methods to use data in memory as default value
+     *  Implemented to allow other instance methods to use data in memory as
+     *  default value
      *
      * @param {string} str - The string to be hashed
-     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
+     * @param {string} [algo='SHA-256'] - The hash algorithm to be used (see
+     *        https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest)
      *
      * @returns {PromiseLike<string>} Resolves to the string hash digest
      *
@@ -850,8 +899,8 @@ class DataStorage {
      */
 
     /** Read items from local storage
-     *    Returns `null` if data in local storage is not truthy
-     *    Otherwise returns result of decrypt()
+     *  Returns `null` if data in local storage is not truthy
+     *  Otherwise returns result of decrypt()
      *
      * @param {string} key
      *
@@ -873,7 +922,8 @@ class DataStorage {
                     return '{}';
                 }
 
-                //  Load remote data file, save locally under `key`, and return data string
+                //  Load remote data file, save locally under `key`, and return
+                //  data string
                 alert('Loading remote data is not yet implemented\nAborting');
 
                 //  Else reject with reason to indicate why sync failed
@@ -891,7 +941,8 @@ class DataStorage {
     }
 
     /** Write items to local storage
-     *    Returns hash digest of **the data string written to disk (not the data in memory)**
+     *  Returns hash digest of **the data string written to disk (not the data
+     *  in memory)**
      *
      * @param {string} key
      * @param {string|object} data
@@ -923,12 +974,15 @@ class DataStorage {
      *  static async xhrPost()
      */
 
-    /** Issue XMLHttpRequests with the GET method to a given URL with optional headers
+    /** Issue XMLHttpRequests with the GET method to a given URL with optional
+     *  headers
      *
      * @param {string} url - The URL of the request target file
-     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as
+     *        request headers to be set on the XHR object before it is sent
      *
-     * @returns {PromiseLike<string>} Resolves to the value of the server response
+     * @returns {PromiseLike<string>} Resolves to the value of the server
+     *          response
      *
      * @private
      */
@@ -945,7 +999,8 @@ class DataStorage {
                     throw er;
                 };
 
-                //  Notice that the request is opened before the `load` event handler is defined
+                //  Notice that the request is opened before the `load` event
+                //  handler is defined
                 //  This is done to simplify the onload handler
                 request.open('GET', url);
 
@@ -955,8 +1010,12 @@ class DataStorage {
                 });
 
                 //  Define the onload handler
-                //  Since this function is defined after the request is opened, it does not need to check the readyState property of the request
-                //   - Opening a request causes the onload event to fire a few times, at which point the readyState property reflects an earlier phase of the request cycle
+                //  Since this function is defined after the request is opened,
+                //  it does not need to check the readyState property of the
+                //  request
+                //   - Opening a request causes the onload event to fire a few
+                //   times, at which point the readyState property reflects an
+                //   earlier phase of the request cycle
                 request.onload = function () {
                     try {
                         if(this.statusText === 'OK') {
@@ -983,13 +1042,17 @@ class DataStorage {
         }
     }
 
-    /** Dispatch XMLHttpRequests with the POST method to a given URL with specified data and optional headers
+    /** Dispatch XMLHttpRequests with the POST method to a given URL with
+     *  specified data and optional headers
      *
-     * @param {object|string} data - The data object to be serialized and sent as the request body
+     * @param {object|string} data - The data object to be serialized and sent
+     *        as the request body
      * @param {string} url - The URL of the request target file
-     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as request headers to be set on the XHR object before it is sent
+     * @param {XHRHeader[]} [headers=[]] - An array of key-value string pairs as
+     *        request headers to be set on the XHR object before it is sent
      *
-     * @returns {PromiseLike<string>} Resolves to the value of the server response
+     * @returns {PromiseLike<string>} Resolves to the value of the server
+     *          response
      *
      * @private
      */
@@ -1003,8 +1066,10 @@ class DataStorage {
                 //  This is done to simplify the onload handler
                 let request = new XMLHttpRequest();
 
-                //  Monitor for network errors (different from bad request status checked in 'onload')
-                //  e.g. poor network connection and no response received, a.k.a. 'request timed out'
+                //  Monitor for network errors (different from bad request
+                //  status checked in 'onload')
+                //  e.g. poor network connection and no response received,
+                //  a.k.a. 'request timed out'
                 request.onerror = function(er) {
                     if(!(er instanceof DSError))
                         er = new DSErrorXhrGetRequest(`POST request for ${url} encountered an error`, er);
@@ -1019,7 +1084,8 @@ class DataStorage {
                     request.setRequestHeader(header, value);
                 });
 
-                //  The onload event handler fires only once the full response has been received (i.e. readystate===4 and statusText===OK)
+                //  The onload event handler fires only once the full response
+                //  has been received (i.e. readystate===4 and statusText===OK)
                 request.onload = function() {
                     try {
                         if(this.statusText === 'OK') {
@@ -1054,9 +1120,12 @@ class DataStorage {
      */
 
     /** Encrypt a string with a given password
-     *    `deriveKey()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.deriveKey()` reference][deriveKey() ref]
-     *    `encrypt()` call copied with minor adjustments from example on [MDN's `SubtleCrypto.encrypt()` reference][encrypt() ref]
-     *    MDN's references didn't explain what the "salt" parameter is; that was found on [the linked **GitHub** example][github example]
+     *  `deriveKey()` call copied with minor adjustments from example on
+     *  [MDN's `SubtleCrypto.deriveKey()` reference][deriveKey() ref]
+     *  `encrypt()` call copied with minor adjustments from example on
+     *  [MDN's `SubtleCrypto.encrypt()` reference][encrypt() ref]
+     *  MDN's references didn't explain what the "salt" parameter is; that was
+     *  found on [the linked **GitHub** example][github example]
      *
      * [deriveKey() ref]: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveKey
      *     "SubtleCrypto.deriveKey() - MDN - March 5, 2019"
@@ -1066,7 +1135,8 @@ class DataStorage {
      *     "MDN/DOM examples/pbkdf2.js - GitHub - March 5, 2019"
      *
      * @param {string} plaintext - Data string to be encrypted
-     * @param {string} [password='password'] - The password to be used as the cryptographic key
+     * @param {string} [password='password'] - The password to be used as the
+     *        cryptographic key
      *
      * @returns {PromiseLike<string>} The encrypted cipher object
      */
@@ -1117,10 +1187,12 @@ class DataStorage {
     }
 
     /** Decrypt a cipher with a given password
-     *    Presently just an alias for `sjcl.decrypt()`
+     *  Presently just an alias for `sjcl.decrypt()`
      *
-     * @param {(AesGcmCipher|string<AesGcmCipher>)} cipher - Cipher object to be decrypted
-     * @param {string} [password='password'] - The password to be used as the cryptographic key
+     * @param {(AesGcmCipher|string<AesGcmCipher>)} cipher - Cipher object to be
+     *        decrypted
+     * @param {string} [password='password'] - The password to be used as the
+     *        cryptographic key
      *
      * @returns {PromiseLike<string>} The decrypted text
      */
@@ -1176,10 +1248,11 @@ class DataStorage {
      */
 
     /** Parse a JSON string into an Javascript Object
-     *    Presently just an alias for `JSON.parse()`
+     *  Presently just an alias for `JSON.parse()`
      *
      * @param {string} jstr - The string to be parsed
-     * @param {function} [reviver] - A function that parses given JSON text in a specific way
+     * @param {function} [reviver] - A function that parses given JSON text in a
+     *        specific way
      *
      * @returns {*}
      *
@@ -1195,10 +1268,11 @@ class DataStorage {
     }
 
     /** Serialize a JavaScrip Object into a string
-     *    Presently just an alias for `JSON.parse()`
+     *  Presently just an alias for `JSON.parse()`
      *
      * @param {object} val - The object to be serialized
-     * @param {function} [replacer] - A function that replaces property values with alternate data before serializing
+     * @param {function} [replacer] - A function that replaces property values
+     *        with alternate data before serializing
      *
      * @returns {string}
      *
@@ -1215,7 +1289,8 @@ class DataStorage {
 
     /** Serializing all data instances in a consistent format
      *
-     * @returns {string} JSON string of all data instances stored in `.types` object
+     * @returns {string} JSON string of all data instances stored in `.types`
+     *          object
      *
      * @throws {DSErrorCompileDataString}
      *
@@ -1245,17 +1320,18 @@ class DataStorage {
 }
 
 /** Standard data sorting algorithm
- *      For use with `Array.prototype.sort()`
+ *  For use with `Array.prototype.sort()`
  *
  * @param {DSDataRecord} a
  * @param {DSDataRecord} b
  *
- * @return {number} - will be less than 0 if `a` was created more recently than `b`, otherwise greater than 0
+ * @return {number} - will be less than 0 if `a` was created more recently than
+ *         `b`, otherwise greater than 0
  */
 const stdSort = (a, b) => b.id - a.id;
 
 /** Convert a string of hexadecimal characters to a `Uint8Array`
- *   Adapted from [StackOverflow answer][hex string conversion]
+ *  Adapted from [StackOverflow answer][hex string conversion]
  *
  * [hex string conversion]: https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript
  *     "How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019"
@@ -1274,7 +1350,7 @@ function fromHexString(hexString) {
 }
 
 /** Convert an array of 8-bit integers to a string of hexadecimal characters
- *   Adapted from [StackOverflow answer][hex string conversion]
+ *  Adapted from [StackOverflow answer][hex string conversion]
  *
  * [hex string conversion]: https://stackoverflow.com/questions/38987784/how-to-convert-a-hexadecimal-string-to-uint8array-and-back-in-javascript
  *     "How to convert a hexadecimal string to Uint8Array and back in JavaScript? - Stack Overflow - March 5, 2019"
