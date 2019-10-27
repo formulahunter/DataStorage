@@ -1,20 +1,24 @@
-//  Ignore PhpStorm project directory
+#  Ignore PhpStorm project directory
 .idea/*
 
-//  Ignore user data files
+#  Ignore user data files
 data/*
 
-//  Ignore JSDoc documentation directory, which can be reconstructed at any
-//  time based on JSDoc comments in the source files
+#  Ignore JSDoc documentation directory, which can be reconstructed at any
+#  time based on JSDoc comments in the source files
 doc/*
 
-//  Ignore log files
+#  Ignore log files
 log/*
 
-//  Ignore Git message files
-message*.*
-commit-message.md
+#  Ignore Git message files
+*-message.md
+*-msg.md
+*-message.txt
+*-msg.txt
+*-message.bk
+*-msg.bk
 
-//  Ignore images
+#  Ignore images
 *.png
 *.gif
