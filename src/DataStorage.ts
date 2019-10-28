@@ -44,14 +44,11 @@ class DataStorage {
 
         //  Configure data type index and containers
         for(let cls of types) {
-            //  TODO CHANGE THIS BACK TO THE instanceof OPERATOR ONCE
-            //   DSTypeDefs IS MIGRATED
-            // if(!(cls.prototype instanceof DSDataRecord)) {
-            if(cls.prototype.constructor.name !== "DSDataRecord") {
+            if(!(cls.prototype instanceof DSDataRecord)) {
                 let er = new TypeError('Cannot construct DataStorage' +
                     ' instance with given data type ' + cls.toString() + ' -' +
                     ' data classes must extend DSDataRecord');
-                er.name = "ConstructorArgumentMustExtendDSDataRecord";
+                er.name = "InvalidArgumentType";
                 throw er;
             }
 
