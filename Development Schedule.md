@@ -2,7 +2,9 @@
 
 
 > *This timeline serves as a general road map for development activities &
-> priorities.*
+> priorities. A version designation is comprised of a short description and a
+> (not necessarily explicit) set of qualifications/criteria that must be met to
+> satisfy that description.*
 
 [TOC]: # "Contents"
 
@@ -38,4 +40,7 @@
     * v1.0.1 - Testing in **MealPlan**
     * v1.0.2 - Testing in **Budget**
     * v1.0.3 - Testing in **Checklist**
-* v2 - Deferred evaluation
+  * v1.1 - Deferred evaluation
+* v2 - Implementation overhaul
+  * v2.0 - **TypeScript** implementation
+    * v2.0.0 -
