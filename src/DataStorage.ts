@@ -3,7 +3,7 @@
  * @since October 21, 2019
  */
 
-/// <reference path="./DSTypeDefs.js">
+/// <reference path="./DSTypeDefs.ts">
 
 /** The `DataStorage` class provides an abstract interface to an advanced
  *  data storage protocol designed to be both fast and robust
@@ -58,6 +58,48 @@ class DataStorage {
             this.types.set(cls, []);
             this.deleted.set(cls, []);
             this.classes[cls.name] = cls;
+        }
+    }
+
+
+    /** Parse a JSON string into an Javascript Object
+     *  Presently just an alias for `JSON.parse()`
+     *
+     * @param jstr - The string to be parsed
+     *
+     * @throws {DSErrorParseJSON}
+     */
+    static parse(jstr: string): object {
+        try {
+            return JSON.parse(jstr);
+        }
+        catch(er) {
+            //  TODO CHANGE THIS BACK TO `DSErrorParseJSON` ONCE DEFINED
+            let wrapper = new Error(`Failed to parse ${jstr}\n${er.toString()}`);
+            wrapper.name = 'DSErrorParseJSON';
+
+            throw wrapper;
+        }
+    }
+
+    /** Serialize a JavaScrip Object into a string
+     *  Presently just an alias for `JSON.parse()`
+     *
+     * @param val - The object to be serialized
+     *
+     * @throws {DSErrorSerializeJSON}
+     */
+    static serialize(val: object): string {
+        try {
+            return JSON.stringify(val);
+        }
+        catch(er) {
+            //  TODO CHANGE THIS BACK TO `DSErrorSerializeJSON` ONCE
+            //  DEFINED
+            let wrapper = new Error(`Failed to serialize ${val}\n${er.toString()}`);
+            wrapper.name = 'DSErrorSerializeJSON';
+
+            throw wrapper;
         }
     }
 }
