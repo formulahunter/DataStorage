@@ -55,16 +55,17 @@ interface DSDataJSONRecord {
  * @since March 10, 2019
  */
 class DSDataRecord {
-    /** Defined as the timestamp at which the data instance was saved
-     * Also used as the record's ID
+    
+    /** DSDataRecord constructor
+     *
+     * @property created - Defined as the timestamp at which the data
+     * instance was saved; also used as the record's ID
+     *
+     * @property modified - Defined as the timestamp of the **most recent**
+     * modification of this instance; set to -1 for instances that have not
+     * been modified since they were created.
      */
-    private created: number = -1;
-
-    /** Defined as the timestamp of the **most recent** modification of this
-     * instance; set to -1 for instances that have not been modified since they
-     * were created.
-     */
-    private modified: number = -1;
+    constructor(private created: number = -1, private modified: number = -1) {}
 
 
     /** Get a `DSDataRecord` from a **JSON** object or string
