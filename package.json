@@ -1,0 +1,14 @@
+{
+  "name": "datastorage",
+  "version": "2.0.0",
+  "description": "a robust hybrid (local/remote) data storage api focused on minimizing data exposure while allowing synchronization across multiple devices",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "formula-hunter",
+  "license": "SEE LICENSE IN DataStorage.js"
+}
