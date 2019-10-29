@@ -12,18 +12,18 @@
  */
 class DataStorage {
 
-    /** **JavaScript** `Map` object mapping `DSDataRecordClass` ->
-     *  `DSDataRecordContainer`
+    /** **JavaScript** `Map` object mapping `DSDataRecord` class objects to
+     *  their respective record containers
      */
     private types: Map<((...args: any) => any), any[]> = new Map();
 
-    /** **JavaScript** `Map` object mapping `DSDataRecordClass` ->
-     *  `DSDataDeletedRecordContainer`
+    /** **JavaScript** `Map` object mapping `DSDataRecord` class objects to
+     *  their respective deleted record containers
      */
     private deleted: Map<((...args: any) => any), any[]> = new Map();
 
-    /** "Index" mapping `DSDataRecordClassName`s to their
-     *  respective `DSDataRecordClass`es
+    /** An "index" mapping `DSDataRecordClassName`s to their respective
+     *  `DSDataRecordClass`es
      */
     private classes: any = Object.create(null);
 
@@ -35,7 +35,8 @@ class DataStorage {
      */
     private maxID: number = -1;
 
-    /**
+    /** DSDataStorage constructor
+     *
      * @param key - The key to be used for storing data in localStorage
      * @param types - The class objects (constructor functions) of each data
      *        type to be managed by this `DataStorage` instance

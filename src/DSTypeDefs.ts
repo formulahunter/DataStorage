@@ -55,7 +55,7 @@ interface DSDataJSONRecord {
  * @since March 10, 2019
  */
 class DSDataRecord {
-    
+
     /** DSDataRecord constructor
      *
      * @property created - Defined as the timestamp at which the data
@@ -109,9 +109,8 @@ class DSDataRecord {
     }
 
     /** Get an object literal representing this data instance, with the intent
-     *  to serialize to a JSON string.
-     *
-     *  Subclasses must implement this method and initiate their return value
+     *  to serialize to a JSON string. Subclasses must implement this method
+     *  and initiate their return value
      *  using `super.toJSON()`
      */
     toJSON(): object {
