@@ -33,6 +33,7 @@ class DataStorage {
      *  Used to assign unique ID's during batch save processes. An initial
      *  value of -1 is reassigned during initialization.
      */
+    // @ts-ignore
     private maxID: number = -1;
 
     /** DSDataStorage constructor
@@ -41,6 +42,7 @@ class DataStorage {
      * @param types - The class objects (constructor functions) of each data
      *        type to be managed by this `DataStorage` instance
      */
+    // @ts-ignore
     constructor(private key:string, types: ((...args: any) => any)[]) {
 
         //  Configure data type index and containers

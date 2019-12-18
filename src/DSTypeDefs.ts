@@ -39,7 +39,12 @@ class DSDataRecordID {
 /** DSDataActivityRank
  * Used to reconcile data record updates
  */
-enum DSDataActivityRank {NEW, MODIFIED, DELETED, CONFLICT}
+enum DSDataActivityRank {
+    NEW = 'new',
+    MODIFIED = 'modified',
+    DELETED = 'deleted',
+    CONFLICT = 'conflict'
+}
 
 
 /** DSDataJSONRecord
@@ -188,3 +193,156 @@ class DSDataRecord {
         return `${this.constructor.name}#${this.id}`;
     }
 }
+
+
+/** Data index by type
+ *   `Object` literal whose keys are `DSDataRecord` subclass names (type `string`)
+ *   The value at each key is the corresponding `DSDataRankIndex` container
+ *   Types with no relevant data are not represented (their index is `undefined`)
+ *     There is no global reference to the complete collection of data types/classes
+ *     Contrast with `DSDataActivityRank`, whose members are globally defined constants and so can be iterated over
+ *
+ * @typedef {object.<string, (DSDataRankIndex|undefined)>} DSDataTypeIndex
+ * @dict
+ */
+interface DSDataTypeIndex {
+    [class_name: string]: DSDataRankIndex;
+}
+
+/** Data index by rank
+ *   An object literal whose keys are `DSDataActivityRank` values
+ *   The value at each key is the corresponding `DSDataIdIndex` container
+ *   A rank index with no relevant data will be defined as an empty object
+ *
+ * This index is defined as a `type` alias, not an `interface`, so that
+ * property keys may be restricted to `DSDataActivityRank` values (see
+ * http://www.typescriptlang.org/docs/handbook/advanced-types.html#interfaces-vs-type-aliases
+ * for details)
+ *
+ * @typedef {object.<DSDataActivityRank, DSDataIdIndex>} DSDataRankIndex
+ * @dict
+ */
+type DSDataRankIndex = {
+    [R in DSDataActivityRank]: DSDataIdIndex;
+}
+
+/** Data index by id
+ *   An object literal whose keys are data instance ID's (cast to `string` types)
+ *   The value at each key is the corresponding `DSDataRecord` instance
+ *
+ * typedef {object.<(string)DSDataRecordID, DSDataRecord>} DSDataIdIndex        //  #NEWPROJECT-JSDOCEXTEND Proposed format extension allowing explicit casting of one type to another
+ * @typedef {object.<DSDataRecordID, DSDataRecord>} DSDataIdIndex
+ * @dict
+ */
+interface DSDataIdIndex {
+    [id: string]: DSDataRecord;
+}
+
+
+/** Reconcile result summary
+ *
+ * @since 3/12/2019
+ */
+class DSReconcileResult {
+
+    /** Hash digest of the server's data file computed after running its
+     *  reconciliation algorithm */
+    readonly hash: string;
+
+    /** Container object for reconciled/conflicting data records */
+    data: DSDataTypeIndex = {};
+
+
+    /** Instances must be constructed with the updated remote hash accounting for
+     *  any data added/edited/deleted during reconciliation
+     *
+     * @param hash - The remote hash digest as returned by `reconcile.php`
+     * @param [serverData] - The data object returned by `reconcile.php`
+     */
+    constructor(hash: string, serverData: DSDataTypeIndex) {
+        this.hash = hash;
+        this.data = serverData;
+    }
+ }
+
+
+/** Sync result summary type
+ *  The `DSSyncResult` combines two earlier "interfaces" to summarize all
+ *  relevant info about a sync operation
+ *   1. The resolved `local` and `remote` hash digests, and interface methods
+ *      `get succeeds()`, `get sync()`, and `get hash()`
+ *   2. The `DSReconcileResult` interface, with properties `hash` and
+ *      `reconcile`
+ *
+ * @since 3/12/2019
+ */
+class DSSyncResult {
+
+    /** Resolved local hash digest */
+    readonly local: string;
+
+    /** Resolved remote hash digest */
+    readonly remote: string;
+
+    /** Reconciliation result; defaults to an empty object */
+    reconcile?: DSReconcileResult;
+
+    /** The timestamp at which the sync was confirmed successful; default value
+     *  of -1 indicates sync not yet confirmed
+     */
+    private _sync: number = -1;
+
+    /** Instances must be constructed with the resolved local & remote hash values
+     *
+     * @param local - Resolved local hash digest
+     * @param remote - Resolved remote hash digest
+     * @param [reconcile] - reconciliation result; defaults to an empty object
+     *
+     */
+    constructor(local: string, remote: string, reconcile?: DSReconcileResult) {
+        this.local = local;
+        this.remote = remote;
+
+        // If a discrepancy was resolved, the resolved data instances are contained here
+        this.reconcile = reconcile;
+    }
+
+    /** Get the timestamp at which the sync was confirmed successful; default
+     * value of -1 indicates sync not yet confirmed
+     */
+    get sync(): number {
+        return this._sync;
+    }
+
+    /** After a sync is confirmed, gets the hash digest both data stores have
+     *  synced with
+     */
+    get hash(): string {
+        return this.succeeds ? this.remote : '';
+    }
+
+    /** A simple, direct indication of whether or not the sync was successful */
+    get succeeds(): boolean {
+        if(typeof this.local !== 'string' || typeof this.remote !== 'string')
+            throw new Error('DSSyncResult configured with non-string local' +
+                ' or remote hash property');
+
+        if(this.local !== this.remote)
+            return false;
+
+        //  Set the `_sync` property if this is the first time sync has been
+        //  confirmed for this instance
+        if(this._sync !== -1) {
+            this._sync = Date.now();
+        }
+
+        return true;
+    }
+}
+
+/*
+type Sha256Digest = string;
+function isSha256Digest(val: string): val is Sha256Digest {
+    return (new RegExp('[a-zA-z0-9]{64}')).test(val);
+}
+*/

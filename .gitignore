@@ -1,6 +1,10 @@
 #  Ignore PhpStorm project directory
 .idea/*
 
+# Ignore the TypeScript build directory (config file is included so projects can
+# be rebuilt consistently
+lib/*
+
 #  Ignore user data files
 data/*
 
