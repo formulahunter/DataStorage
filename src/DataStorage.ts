@@ -41,9 +41,11 @@ class DataStorage {
      * @param key - The key to be used for storing data in localStorage
      * @param types - The class objects (constructor functions) of each data
      *        type to be managed by this `DataStorage` instance
+     *
+     * @throws {InvalidArgumentType}
      */
     // @ts-ignore
-    constructor(private key:string, types: ((...args: any) => any)[]) {
+    constructor(private key: string, types: ((...args: any) => any)[]) {
 
         //  Configure data type index and containers
         for(let cls of types) {
@@ -62,7 +64,7 @@ class DataStorage {
     }
 
 
-    /** Parse a JSON string into an Javascript Object
+    /** Parse a JSON string into a JavaScript Object
      *  Presently just an alias for `JSON.parse()`
      *
      * @param jstr - The string to be parsed
