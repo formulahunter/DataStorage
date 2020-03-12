@@ -42,7 +42,7 @@ class DataStorage {
      * @param types - The class objects (constructor functions) of each data
      *        type to be managed by this `DataStorage` instance
      *
-     * @throws {InvalidArgumentType}
+     * @throws {TypeError}
      */
     // @ts-ignore
     constructor(private key: string, types: ((...args: any) => any)[]) {
@@ -89,7 +89,7 @@ class DataStorage {
      *
      * @param val - The object to be serialized
      *
-     * @throws {DSErrorSerializeJSON}
+     * @throws {SyntaxError}
      */
     static serialize(val: object): string {
         try {
@@ -98,7 +98,7 @@ class DataStorage {
         catch(er) {
             //  TODO CHANGE THIS BACK TO `DSErrorSerializeJSON` ONCE
             //  DEFINED
-            let wrapper = new Error(`Failed to serialize ${val}\n${er.toString()}`);
+            let wrapper = new SyntaxError(`Failed to serialize ${val}\n${er.toString()}`);
             wrapper.name = 'DSErrorSerializeJSON';
 
             throw wrapper;
