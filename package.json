@@ -10,5 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "formula-hunter",
-  "license": "SEE LICENSE IN DataStorage.js"
+  "license": "SEE LICENSE IN DataStorage.js",
+  "dependencies": {
+    "typescript": "^3.9.6"
+  }
 }

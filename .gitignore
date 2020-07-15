@@ -1,12 +1,15 @@
 #  Ignore PhpStorm project directory
-.idea/*
+.idea
+
+# Ignore NPM packages
+node_modules
 
 # Ignore the TypeScript build directory (config file is included so projects can
 # be rebuilt consistently
-lib/*
+lib/
 
 #  Ignore user data files
-data/*
+data/
 
 #  Ignore JSDoc documentation directory, which can be reconstructed at any
 #  time based on JSDoc comments in the source files
@@ -22,7 +25,3 @@ log/*
 *-msg.txt
 *-message.bk
 *-msg.bk
-
-#  Ignore images
-*.png
-*.gif
