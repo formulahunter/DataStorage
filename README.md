@@ -1,12 +1,45 @@
 # DataStorage
 
-> *This class is intended to provide an abstract interface for a robust data
-> storage pattern in which data is stored locally on one or more clients as well
-> as remotely in a single server data file. Clients regularly synchronize their
-> data files with the one on the server, and thereby indirectly with one
-> another.*
+> *The `DataStorage` module provides a simple, abstract interface to a robust
+> hybrid local-remote data storage protocol. It can be easily implemented in any
+> application that handles data over multiple sessions, subject to some basic
+> infrastructure prerequisites.*
 
-**Note:** *This class was initially developed as part of the **MealPlan**
-project, starting on November 25th, 2018. On March 3rd, 2019, it was extracted
-into its own PhpStorm project. A Git repository was initialized and a
-documentation set was configured using **JSDoc**.*
+
+[TOC]: ### "Contents"
+
+### Contents
+1. [Overview](#overview)
+    1. [Features](#features)
+    2. [Public API](#public-api)
+
+
+# Overview
+
+
+### Features
+
+Operation of the module is characterized by the following
+qualities:
+
+* *Speed*: Page load times are minimized by relying primarily on local data
+  storage and evaluating remote sync result only once they are available.
+* *Security*: Data exposure is mitigated by encrypting data in local storage and
+  comparing remote repositories using cryptographic hash digests; data is
+  transferred in incremental operations to expose only what is strictly
+  necessary, and network connections are encrypted.
+* *Minimal data transfer*: Cryptographic hash functions allow synchronization of
+  large amounts of data using a very small network footprint.
+* *Multi-device access*: By periodically synchronizing with a centralized
+  server, peripheral client devices are also indirectly synchronized with one
+  another.
+* *Data backup*: With data saved on multiple devices, any copy can be used to
+  restore another in the event of unforeseeable damage, loss or theft.
+
+
+### Public API
+
+* *search*
+* *save*
+* *edit*
+* *delete*
