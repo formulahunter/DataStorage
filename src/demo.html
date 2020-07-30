@@ -21,11 +21,13 @@
     <meta charset="UTF-8">
     <title>DataStorage demo</title>
 
-    <script type="text/javascript" src="DataStorage.mjs"></script>
-    <script type="text/javascript" src="DSTypeDefs.mjs"></script>
-    <script type="text/javascript" src="DSError.mjs"></script>
+    <!--<script type="module" src="DataStorage.mjs"></script>
+    <script type="module" src="DSTypeDefs.mjs"></script>
+    <script type="module" src="DSError.mjs"></script>-->
 
-    <script type="text/javascript">
+    <script type="module">
+        import DataStorage from './DataStorage.mjs';
+        import {DSDataRecord} from './DSTypeDefs.mjs';
         window.addEventListener('load', main, false);
 
         class OneClass extends DSDataRecord {

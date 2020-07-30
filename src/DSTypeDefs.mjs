@@ -323,3 +323,11 @@ class DSSyncResult {
         }
     }
 }
+
+
+export {
+    DSDataActivityRank,
+    DSDataRecord,
+    DSReconcileResult,
+    DSSyncResult
+}

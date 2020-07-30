@@ -438,3 +438,44 @@ class DSErrorSetLastSync extends DSError {
  * @property {string} iv
  * @property {string} text
  */
+
+
+
+export {
+    DSError,
+    DSErrorAdd,
+    DSErrorAddIDConflict,
+    DSErrorAddInvalidType,
+    DSErrorCompileDataString,
+    DSErrorComputeHashDigest,
+    DSErrorConvertFromHexString,
+    DSErrorConvertToHexString,
+    DSErrorEdit,
+    DSErrorEditFinalSync,
+    DSErrorEditLocalHash,
+    DSErrorEditPrelimSync,
+    DSErrorEditRemoteHash,
+    DSErrorGetLastSync,
+    DSErrorInvalidType,
+    DSErrorParseJSON,
+    DSErrorReadLocalData,
+    DSErrorReconcile,
+    DSErrorRemoteDataLoad,
+    DSErrorRemove,
+    DSErrorReplace,
+    DSErrorReplaceInvalidType,
+    DSErrorReplaceNoMatch,
+    DSErrorSave,
+    DSErrorSavePrelimSync,
+    DSErrorSaveFinalSync,
+    DSErrorSearch,
+    DSErrorSearchInvalidType,
+    DSErrorSerializeJSON,
+    DSErrorSetLastSync,
+    DSErrorSyncFail,
+    DSErrorWriteLocalStorage,
+    DSErrorXhrGetRequest,
+    DSErrorXhrGetRequestStatus,
+    DSErrorXhrPostRequest,
+    DSErrorXhrPostRequestStatus,
+}

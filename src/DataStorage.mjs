@@ -20,6 +20,50 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import {
+    DSDataRecord,
+    DSReconcileResult,
+    DSSyncResult
+} from './DSTypeDefs.mjs';
+import {
+    DSError,
+    DSErrorAdd,
+    DSErrorAddIDConflict,
+    DSErrorAddInvalidType,
+    DSErrorCompileDataString,
+    DSErrorComputeHashDigest,
+    DSErrorConvertFromHexString,
+    DSErrorConvertToHexString,
+    DSErrorEdit,
+    DSErrorEditFinalSync,
+    DSErrorEditLocalHash,
+    DSErrorEditPrelimSync,
+    DSErrorEditRemoteHash,
+    DSErrorGetLastSync,
+    DSErrorInvalidType,
+    DSErrorParseJSON,
+    DSErrorReadLocalData,
+    DSErrorReconcile,
+    DSErrorRemoteDataLoad,
+    DSErrorRemove,
+    DSErrorReplace,
+    DSErrorReplaceInvalidType,
+    DSErrorReplaceNoMatch,
+    DSErrorSave,
+    DSErrorSavePrelimSync,
+    DSErrorSaveFinalSync,
+    DSErrorSearch,
+    DSErrorSearchInvalidType,
+    DSErrorSerializeJSON,
+    DSErrorSetLastSync,
+    DSErrorSyncFail,
+    DSErrorWriteLocalStorage,
+    DSErrorXhrGetRequest,
+    DSErrorXhrGetRequestStatus,
+    DSErrorXhrPostRequest,
+    DSErrorXhrPostRequestStatus,
+} from './DSError.mjs';
+
 /** Server query file directory relative to page that loads `DataStorage`*/
 const QUERY_DIR = '';
 
@@ -28,7 +72,7 @@ const QUERY_DIR = '';
  *
  * @since November 25, 2019
  */
-class DataStorage {
+export default class DataStorage {
     /** Constructor function
      * @param {string} key - The key to be used for storing data in localStorage
      * @param {DSDataRecordClass[]} types - The class objects (constructor
