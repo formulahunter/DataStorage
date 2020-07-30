@@ -26,8 +26,8 @@
     <script type="module" src="DSError.mjs"></script>-->
 
     <script type="module">
-        import DataStorage from './DataStorage.mjs';
-        import {DSDataRecord} from './DSTypeDefs.mjs';
+        import DataStorage, {DSDataRecord} from "./index.mjs";
+
         window.addEventListener('load', main, false);
 
         class OneClass extends DSDataRecord {
