@@ -12,6 +12,8 @@
 1. [Overview](#overview)
     1. [Features](#features)
     2. [Public API](#public-api)
+2. [Backend API](#backend-api)
+    1. [Features](#spec)
 
 
 # Overview
@@ -43,3 +45,34 @@ qualities:
 * *save*
 * *edit*
 * *delete*
+
+
+## Backend API
+
+The client module requires that a server-side API be exposed to interface with
+the file system. Implementation of this backend is highly dependent on the
+production environment and, as of v0.0.1, so is not included in this package.
+Samples used for development may be added to the package in the near future --
+please get in touch if this would be helpful.
+
+
+### Spec
+
+As of v0.0.1, all of the server's public endpoints can accept **HTTP** requests
+with the **POST** method; additionally, a single endpoint, the `hash` query (see
+below) is exposed to **GET** requests. **POST** requests must be populated with
+a **JSON** object with a `query` property, whose value is one of the string
+values listed below, and an optional `data` property, whose value (if defined)
+depends on which `query` is requested. As implemented, requests are made to
+`query.php`. The possible `query` strings are:
+
+* `hash` - responds with the hash digest of the server's data file
+* `save` - saves a *new* data record
+* `edit` - updates an *existing* data record
+* `delete` - marks an *existing* data record as deleted
+* `reconcile` - identifies trivial discrepancies and determines the "correct"
+    value; if discrepancies cannot be automatically reconciles, they are
+    considered "conflicts" and complete details are included in the response for
+    manual resolution by the client
+* `resolve` - relays the results of manual conflict resolution to the server for
+    overwriting the conflicted data file
