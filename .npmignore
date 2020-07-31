@@ -1,0 +1,10 @@
+# Ignore Phpstorm project directory
+.idea/
+
+# Ignore build directory
+lib/
+
+# Ignore non-distribution files
+demo.html
+*.php
+Development Schedule.md

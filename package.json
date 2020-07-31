@@ -1,0 +1,25 @@
+{
+  "name": "@formulahunter/datastorage",
+  "version": "0.0.1",
+  "description": "automate synchronization of client & server data stores, plus other features",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/formulahunter/DataStorage.git"
+  },
+  "keywords": [
+    "user-data",
+    "sync",
+    "multi-device",
+    "backup"
+  ],
+  "author": "Hunter Gayden",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/formulahunter/DataStorage/issues"
+  },
+  "homepage": "https://github.com/formulahunter/DataStorage#readme"
+}

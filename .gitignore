@@ -1,6 +1,9 @@
 #  Ignore PhpStorm project directory
 .idea/*
 
+#  Ignore NPM packages
+node_modules/
+
 #  Ignore user data files
 data/*
 
