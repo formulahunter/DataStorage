@@ -18,6 +18,11 @@
 
 # Overview
 
+The `DataStorage` API was originally meant to simplify client-side user data
+management by automating **HTTP** requests for saving data on a remote server;
+since then its scope has grown to include a handful of additional features
+including offline data access and synchronization between multiple devices.
+
 
 ### Features
 
